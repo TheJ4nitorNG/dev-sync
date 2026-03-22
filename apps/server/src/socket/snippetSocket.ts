@@ -9,30 +9,30 @@ import type {
   PeerColor,
   ContentDelta,
   CursorPosition,
-} from '@dev-sync/types'
-import { PEER_COLORS } from '@dev-sync/types'
+} from '../lib/types.js'
+import { PEER_COLORS } from '../lib/types.js'
 import { prisma } from '../lib/prisma.js'
- 
+
 type AppServer = Server<
   ClientToServerEvents,
   ServerToClientEvents,
   Record<string, never>,
   SocketData
 >
- 
+
 const rooms = new Map<
   string,
   Map<string, { userId: string; color: PeerColor; joinedAt: string }>
 >()
- 
+
 const cursors = new Map<string, Map<string, CursorPosition>>()
- 
+
 function assignColor(snippetId: string): PeerColor {
   const room = rooms.get(snippetId)
   const usedColors = new Set(room ? [...room.values()].map((p) => p.color) : [])
   return PEER_COLORS.find((c: PeerColor) => !usedColors.has(c)) ?? PEER_COLORS[0]!
 }
- 
+
 export function registerSnippetSocket(io: AppServer) {
   io.use((socket, next) => {
     const token = socket.handshake.auth['token'] as string | undefined
@@ -47,10 +47,10 @@ export function registerSnippetSocket(io: AppServer) {
       next(new Error('Unauthorized'))
     }
   })
- 
+
   io.on('connection', (socket) => {
     const { userId } = socket.data
- 
+
     // ── snippet:join ───────────────────────────────────────────────────────
     socket.on('snippet:join', async (snippetId: string) => {
       const snippet = await prisma.snippet.findFirst({
@@ -61,20 +61,20 @@ export function registerSnippetSocket(io: AppServer) {
         select: { id: true },
       })
       if (!snippet) { socket.emit('error', 'Access denied'); return }
- 
+
       socket.join(snippetId)
       socket.data.snippetId = snippetId
- 
+
       if (!rooms.has(snippetId)) rooms.set(snippetId, new Map())
       rooms.get(snippetId)!.set(socket.id, {
         userId,
         color: assignColor(snippetId),
         joinedAt: new Date().toISOString(),
       })
- 
+
       await broadcastPeers(io, snippetId)
     })
- 
+
     // ── snippet:leave ──────────────────────────────────────────────────────
     socket.on('snippet:leave', async (snippetId: string) => {
       socket.leave(snippetId)
@@ -85,7 +85,7 @@ export function registerSnippetSocket(io: AppServer) {
       }
       await broadcastPeers(io, snippetId)
     })
- 
+
     // ── snippet:delta ──────────────────────────────────────────────────────
     socket.on('snippet:delta', async (snippetId: string, delta: ContentDelta) => {
       socket.to(snippetId).emit('snippet:delta', delta)
@@ -101,14 +101,14 @@ export function registerSnippetSocket(io: AppServer) {
         // Non-fatal
       }
     })
- 
+
     // ── cursor:move ────────────────────────────────────────────────────────
     socket.on('cursor:move', (snippetId: string, position: CursorPosition) => {
       if (!cursors.has(snippetId)) cursors.set(snippetId, new Map())
       cursors.get(snippetId)!.set(userId, position)
       socket.to(snippetId).emit('cursor:update', userId, position)
     })
- 
+
     // ── disconnect ─────────────────────────────────────────────────────────
     socket.on('disconnect', async () => {
       const { snippetId } = socket.data
@@ -123,22 +123,22 @@ export function registerSnippetSocket(io: AppServer) {
     })
   })
 }
- 
+
 async function broadcastPeers(io: AppServer, snippetId: string) {
   const room = rooms.get(snippetId)
   if (!room) { io.to(snippetId).emit('peers:update', []); return }
- 
+
   const peerMap = new Map<string, { color: PeerColor; joinedAt: string }>()
   for (const { userId, color, joinedAt } of room.values()) {
     if (!peerMap.has(userId)) peerMap.set(userId, { color, joinedAt })
   }
- 
+
   const userIds = [...peerMap.keys()]
   const users = await prisma.user.findMany({
     where: { id: { in: userIds } },
     select: { id: true, email: true, avatarUrl: true },
   })
- 
+
   const snippetCursors = cursors.get(snippetId)
   const peers: PeerState[] = users.map((u) => ({
     userId: u.id,
@@ -147,6 +147,6 @@ async function broadcastPeers(io: AppServer, snippetId: string) {
     color: peerMap.get(u.id)!.color,
     joinedAt: peerMap.get(u.id)!.joinedAt,
   }))
- 
+
   io.to(snippetId).emit('peers:update', peers)
 }
