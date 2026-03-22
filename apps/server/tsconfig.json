@@ -10,7 +10,7 @@
     "noUncheckedIndexedAccess": false,
     "paths": {
       "@dev-sync/types": [
-        "../../packages/types/src/index.ts"
+        "../../packages/types/dist/index.d.ts"
       ]
     }
   },
