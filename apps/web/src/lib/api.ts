@@ -2,7 +2,11 @@ import axios from 'axios'
 import type { CreateSnippetInput, UpdateSnippetInput } from '@dev-sync/types'
 import { useAuthStore } from '@/stores/authStore'
 
-const http = axios.create({ baseURL: '/api' })
+const http = axios.create({
+  baseURL: import.meta.env['VITE_API_URL']
+    ? `${import.meta.env['VITE_API_URL']}/api`
+    : '/api',
+})
 
 http.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token
