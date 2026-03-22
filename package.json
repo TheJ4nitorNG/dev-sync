@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
+    "build:server": "npm run build --workspace=packages/types && npm run build --workspace=@dev-sync/server",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
     "db:generate": "cd apps/server && npx prisma generate --schema=./prisma/schema.prisma",
