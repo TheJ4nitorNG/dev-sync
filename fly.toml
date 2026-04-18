@@ -9,7 +9,7 @@ primary_region = "yyz" # Set to Toronto based on your error log
   dockerfile = "Dockerfile"
 
 [http_service]
-  internal_port = 8080 # Change this to the port your app listens on
+  internal_port = 3000 # Change this to the port your app listens on
   force_https = true
   auto_stop_machines = true
   auto_start_machines = true
