@@ -2,6 +2,7 @@
   "name": "dev-sync",
   "private": true,
   "workspaces": [
+    "apps/*",
     "packages/*"
   ],
   "scripts": {

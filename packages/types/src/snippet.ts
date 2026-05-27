@@ -154,10 +154,8 @@ export const SUPPORTED_LANGUAGES = [
   'simple',
   'simpol',
   'simscript',
-  'simula',]
-  'simulink',
-    //CONTINUE HERE
-  
+  'simula',
+  'simulink'
 ] as const
 
 export type Language = (typeof SUPPORTED_LANGUAGES)[number]
