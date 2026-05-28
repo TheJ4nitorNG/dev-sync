@@ -12,12 +12,24 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
     res.status(401).json({ ok: false, error: 'Missing token' })
     return
   }
+
+  const token = header.slice(7)
+  const secret = process.env['SUPABASE_JWT_SECRET'] || process.env['JWT_SECRET'] || 'dev-secret-change-me'
+
   try {
-    const token = header.slice(7)
-    const secret = process.env['JWT_SECRET'] ?? 'dev-secret-change-me'
-    req.user = jwt.verify(token, secret) as UserSession
+    const payload = jwt.verify(token, secret) as any
+    
+    // Support both custom JWTs and Supabase JWTs
+    // Supabase puts the user ID in 'sub'
+    req.user = {
+      userId: payload.sub || payload.userId,
+      email: payload.email,
+      iat: payload.iat,
+      exp: payload.exp
+    }
+    
     next()
-  } catch {
+  } catch (err) {
     res.status(401).json({ ok: false, error: 'Invalid token' })
   }
 }

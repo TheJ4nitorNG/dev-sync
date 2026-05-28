@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { supabase } from '@/lib/supabase'
 
 interface AuthState {
   token: string | null
@@ -14,8 +15,24 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       token: null, userId: null, email: null,
       setAuth: (token, userId, email) => set({ token, userId, email }),
-      logout: () => set({ token: null, userId: null, email: null }),
+      logout: () => {
+        supabase.auth.signOut()
+        set({ token: null, userId: null, email: null })
+      },
     }),
     { name: 'dev-sync-auth' },
   ),
 )
+
+// Listen for Supabase auth changes and sync the store
+supabase.auth.onAuthStateChange((event, session) => {
+  if (session) {
+    useAuthStore.getState().setAuth(
+      session.access_token,
+      session.user.id,
+      session.user.email ?? ''
+    )
+  } else if (event === 'SIGNED_OUT') {
+    useAuthStore.getState().logout()
+  }
+})
