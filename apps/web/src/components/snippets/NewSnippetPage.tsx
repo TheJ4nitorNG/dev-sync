@@ -60,7 +60,18 @@ void main() {
   print('Hello, DevSync!');
 }`,
   gml: `// GML snippet
-show_debug_message("Hello, DevSync!");`
+show_debug_message("Hello, DevSync!");`,
+  html: `<!-- HTML snippet -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>DevSync</title>
+</head>
+<body>
+  <h1>Hello, DevSync!</h1>
+</body>
+</html>`
 }
 
 const LANG_STYLE: Record<string, { fg: string }> = {
@@ -70,6 +81,7 @@ const LANG_STYLE: Record<string, { fg: string }> = {
   bash:       { fg: '#a78bfa' }, json:       { fg: '#4fffb0' },
   'c#':       { fg: '#a78bfa' }, 'c++':      { fg: '#f472b6' },
   dart:       { fg: '#4dc9ff' }, gml:        { fg: '#34d399' },
+  html:       { fg: '#f472b6' },
 }
 
 export function NewSnippetPage() {

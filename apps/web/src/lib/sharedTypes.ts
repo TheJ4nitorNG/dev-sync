@@ -24,7 +24,7 @@ export interface UserSession {
 export const SUPPORTED_LANGUAGES = [
   'typescript', 'javascript', 'python', 'go', 'rust',
   'sql', 'bash', 'json', 'yaml', 'markdown', 'plaintext',
-  'c#', 'c++', 'dart', 'gml'
+  'c#', 'c++', 'dart', 'gml', 'html'
 ] as const
 
 export type Language = (typeof SUPPORTED_LANGUAGES)[number]
