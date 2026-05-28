@@ -240,7 +240,7 @@ export function SnippetPage() {
         <div className="flex-1 overflow-hidden">
           <MonacoEditor
             height="100%"
-            language={language}
+            language={language === 'c#' ? 'csharp' : language === 'c++' ? 'cpp' : language === 'gml' ? 'plaintext' : language}
             theme={theme}
             defaultValue={activeSnippet.content}
             onMount={handleMount}

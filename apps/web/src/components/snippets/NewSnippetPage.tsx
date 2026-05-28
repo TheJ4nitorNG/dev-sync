@@ -40,6 +40,27 @@ FROM users u
 LEFT JOIN snippets s ON s.owner_id = u.id
 GROUP BY u.email
 ORDER BY snippet_count DESC;`,
+  'c#': `// C# snippet
+using System;
+
+class Program {
+    static void Main() {
+        Console.WriteLine("Hello, DevSync!");
+    }
+}`,
+  'c++': `// C++ snippet
+#include <iostream>
+
+int main() {
+    std::cout << "Hello, DevSync!" << std::endl;
+    return 0;
+}`,
+  dart: `// Dart snippet
+void main() {
+  print('Hello, DevSync!');
+}`,
+  gml: `// GML snippet
+show_debug_message("Hello, DevSync!");`
 }
 
 const LANG_STYLE: Record<string, { fg: string }> = {
@@ -47,6 +68,8 @@ const LANG_STYLE: Record<string, { fg: string }> = {
   python:     { fg: '#ff6b6b' }, go:         { fg: '#ffca3a' },
   rust:       { fg: '#ff6b6b' }, sql:        { fg: '#4fffb0' },
   bash:       { fg: '#a78bfa' }, json:       { fg: '#4fffb0' },
+  'c#':       { fg: '#a78bfa' }, 'c++':      { fg: '#f472b6' },
+  dart:       { fg: '#4dc9ff' }, gml:        { fg: '#34d399' },
 }
 
 export function NewSnippetPage() {
@@ -288,7 +311,7 @@ export function NewSnippetPage() {
 
           <MonacoEditor
             height="100%"
-            language={language}
+            language={language === 'c#' ? 'csharp' : language === 'c++' ? 'cpp' : language === 'gml' ? 'plaintext' : language}
             theme="vs-dark"
             defaultValue={content}
             onMount={handleMount}
