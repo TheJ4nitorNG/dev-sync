@@ -1,12 +1,12 @@
 import type { Request, Response, NextFunction } from 'express'
-import jwt from 'jsonwebtoken'
+import { supabase } from '../lib/supabase.js'
 import type { UserSession } from '../lib/types.js'
 
 export interface AuthRequest extends Request {
   user?: UserSession
 }
 
-export function authenticate(req: AuthRequest, res: Response, next: NextFunction): void {
+export async function authenticate(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   const header = req.headers.authorization
   if (!header?.startsWith('Bearer ')) {
     res.status(401).json({ ok: false, error: 'Missing token' })
@@ -14,22 +14,28 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
   }
 
   const token = header.slice(7)
-  const secret = process.env['SUPABASE_JWT_SECRET'] || process.env['JWT_SECRET'] || 'dev-secret-change-me'
 
   try {
-    const payload = jwt.verify(token, secret) as any
+    // Let Supabase securely verify the JWT
+    // This avoids having to parse ES256 JWKs or manage JWT secrets manually
+    const { data, error } = await supabase.auth.getUser(token)
     
-    // Support both custom JWTs and Supabase JWTs
-    // Supabase puts the user ID in 'sub'
+    if (error || !data.user) {
+      console.error('Supabase token verification error:', error)
+      res.status(401).json({ ok: false, error: 'Invalid token' })
+      return
+    }
+    
     req.user = {
-      userId: payload.sub || payload.userId,
-      email: payload.email,
-      iat: payload.iat,
-      exp: payload.exp
+      userId: data.user.id,
+      email: data.user.email!,
+      iat: 0, // Placeholder as Supabase API abstracts token parsing
+      exp: 0,
     }
     
     next()
   } catch (err) {
+    console.error('Unexpected auth error:', err)
     res.status(401).json({ ok: false, error: 'Invalid token' })
   }
 }
