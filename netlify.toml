@@ -1,0 +1,10 @@
+[build]
+  base = "apps/web"
+  command = "npm run build"
+  publish = "dist"
+
+# This rule is required for React Router to work correctly on Netlify (SPA routing)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
