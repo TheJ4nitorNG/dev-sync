@@ -22,20 +22,22 @@ const app = express()
 const httpServer = createServer(app)
 
 // ── Socket.io ────────────────────────────────────────────────────────────────
-export const io = new Server<
+const allowedOrigins = (process.env['CLIENT_URL'] ?? 'http://localhost:5173').split(',')
+
+const io = new Server<
   ClientToServerEvents,
   ServerToClientEvents,
   Record<string, never>,
   SocketData
 >(httpServer, {
-  cors: { origin: process.env['CLIENT_URL'] ?? 'http://localhost:5173' },
+  cors: { origin: allowedOrigins },
 })
 
 registerSnippetSocket(io)
 
-// ── Express middleware ────────────────────────────────────────────────────────
+// ── Express middleware ─────────────────────────────────────────────────────────────
 app.use(helmet())
-app.use(cors({ origin: process.env['CLIENT_URL'] ?? 'http://localhost:5173' }))
+app.use(cors({ origin: allowedOrigins }))
 app.use(express.json())
 
 // ── Routes ───────────────────────────────────────────────────────────────────
