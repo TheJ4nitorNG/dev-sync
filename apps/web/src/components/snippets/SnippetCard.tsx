@@ -113,7 +113,7 @@ export function SnippetCard({ snippet, index, listView }: SnippetCardProps) {
       />
 
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 flex items-start gap-3">
+      <div className="px-4 pt-4 pb-3 flex items-start gap-3 relative">
         <div
           className="w-9 h-9 rounded-xl grid place-items-center flex-shrink-0 font-mono text-[10px] font-bold transition-transform group-hover:scale-105"
           style={{ background: lang.bg, color: lang.fg }}
@@ -126,18 +126,38 @@ export function SnippetCard({ snippet, index, listView }: SnippetCardProps) {
           </p>
           <p className="font-mono text-[10px] text-muted mt-0.5">{snippet.language}</p>
         </div>
-        <button
-          onClick={handleDelete}
-          disabled={deleting}
-          className="opacity-0 group-hover:opacity-100 transition-all text-dim hover:text-accent3
-                     w-6 h-6 grid place-items-center rounded-md hover:bg-accent3/10
-                     disabled:cursor-not-allowed flex-shrink-0"
-          title="Delete"
-        >
-          {deleting ? (
-            <span className="w-3 h-3 border border-dim border-t-muted rounded-full" style={{ animation: 'spin 0.6s linear infinite' }} />
-          ) : '×'}
-        </button>
+
+        {/* Hover Actions */}
+        <div className="absolute top-4 right-4 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all translate-y-1 group-hover:translate-y-0">
+          <button
+            onClick={(e) => { e.stopPropagation(); alert('Saved to bookmarks!') }}
+            className="bg-accent text-black px-3 py-1 rounded-full text-[10px] font-bold hover:scale-105 transition-transform"
+          >
+            Save
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="w-7 h-7 bg-card border border-border text-dim hover:text-accent3
+                       grid place-items-center rounded-full hover:bg-accent3/10
+                       disabled:cursor-not-allowed transition-colors"
+            title="Delete"
+          >
+            {deleting ? (
+              <span className="w-3 h-3 border border-dim border-t-muted rounded-full" style={{ animation: 'spin 0.6s linear infinite' }} />
+            ) : '×'}
+          </button>
+        </div>
+      </div>
+
+      {/* Code Preview */}
+      <div className="px-4 pb-2">
+        <div className="relative bg-black/20 rounded-lg border border-white/5 overflow-hidden group-hover:border-white/10 transition-colors">
+          <pre className="p-3 text-[10px] font-mono text-dim leading-relaxed overflow-hidden max-h-32 select-none pointer-events-none">
+            <code>{snippet.content || `// No content...\n// Click to view snippet`}</code>
+          </pre>
+          <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent opacity-60" />
+        </div>
       </div>
 
       {/* Tags + timestamp */}

@@ -125,20 +125,39 @@ export function DashboardPage() {
         {/* ── Greeting + stats ── */}
         {!debouncedSearch && lang === 'all' && !folderParam && (
           <div className="animate-fade-up">
-            <p className="text-muted font-mono text-xs mb-1">{greeting()},</p>
-            <h1 className="text-xl font-extrabold tracking-tight mb-5">
-              {firstName}<span className="text-accent">.</span>
-            </h1>
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+              <div>
+                <p className="text-muted font-mono text-xs mb-1">{greeting()},</p>
+                <h1 className="text-3xl font-extrabold tracking-tight">
+                  Discover snippets<span className="text-accent">.</span>
+                </h1>
+                <p className="text-dim font-mono text-[10px] mt-2 max-w-md leading-relaxed uppercase tracking-wider">
+                  The central repository for your team's most valuable logic and architectural patterns.
+                </p>
+              </div>
+
+              {/* Quick Tags */}
+              <div className="flex flex-wrap gap-2">
+                {['#react', '#node', '#rust', '#auth', '#socket', '#ui'].map((t) => (
+                  <button
+                    key={t}
+                    className="px-3 py-1.5 rounded-full bg-card border border-border text-[10px] font-bold text-muted hover:border-accent hover:text-accent transition-all"
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Stat cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 stagger">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 stagger mb-8">
               {STAT_CARDS.map((card) => (
                 <div
                   key={card.key}
-                  className="animate-fade-up card p-4 relative overflow-hidden"
+                  className="animate-fade-up card p-4 relative overflow-hidden group hover:border-border2 transition-colors"
                 >
                   <div
-                    className="absolute top-0 left-0 right-0 h-[2px]"
+                    className="absolute top-0 left-0 right-0 h-[2px] opacity-30 group-hover:opacity-100 transition-opacity"
                     style={{ background: card.color }}
                   />
                   <p className="font-mono text-[9px] text-muted uppercase tracking-widest mb-2">
@@ -177,14 +196,10 @@ export function DashboardPage() {
         {loading && snippets.length === 0 ? (
           /* Skeleton loading */
           <div
-            className={`grid gap-4 ${
-              view === 'grid'
-                ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'
-                : 'grid-cols-1 max-w-3xl'
-            }`}
+            className={`columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4`}
           >
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="card overflow-hidden" style={{ animationDelay: `${i * 50}ms` }}>
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="break-inside-avoid mb-4 card overflow-hidden" style={{ animationDelay: `${i * 50}ms` }}>
                 <div className="p-4 flex gap-3 border-b border-border">
                   <div className="skeleton w-8 h-8 rounded-lg flex-shrink-0" />
                   <div className="flex-1 flex flex-col gap-2">
@@ -192,9 +207,12 @@ export function DashboardPage() {
                     <div className="skeleton h-2.5 rounded w-1/2" />
                   </div>
                 </div>
-                <div className="p-4 flex gap-2">
-                  <div className="skeleton h-4 rounded-full w-12" />
-                  <div className="skeleton h-4 rounded-full w-16" />
+                <div className="p-4 flex flex-col gap-2">
+                  <div className="skeleton h-20 rounded-lg w-full" />
+                  <div className="flex gap-2">
+                    <div className="skeleton h-4 rounded-full w-12" />
+                    <div className="skeleton h-4 rounded-full w-16" />
+                  </div>
                 </div>
               </div>
             ))}
@@ -227,14 +245,16 @@ export function DashboardPage() {
           </div>
         ) : (
           <div
-            className={`grid gap-3 stagger ${
+            className={`${
               view === 'grid'
-                ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'
-                : 'grid-cols-1 max-w-3xl'
+                ? 'columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4'
+                : 'flex flex-col gap-3 max-w-4xl mx-auto w-full'
             }`}
           >
             {snippets.map((sn, i) => (
-              <SnippetCard key={sn.id} snippet={sn} index={i} listView={view === 'list'} />
+              <div key={sn.id} className={`${view === 'grid' ? 'break-inside-avoid mb-4' : ''}`}>
+                <SnippetCard snippet={sn} index={i} listView={view === 'list'} />
+              </div>
             ))}
           </div>
         )}

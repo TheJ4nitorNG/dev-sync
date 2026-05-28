@@ -29,6 +29,7 @@ export default function App() {
         <Route path="snippets/new" element={<NewSnippetPage />} />
         <Route path="snippets/:id" element={<SnippetPage />} />
       </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

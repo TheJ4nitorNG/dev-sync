@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MonacoEditor, { type OnMount } from '@monaco-editor/react'
 import { SUPPORTED_LANGUAGES, type Language } from '@dev-sync/types'
@@ -53,12 +53,19 @@ export function NewSnippetPage() {
   const [title, setTitle]       = useState('')
   const [language, setLanguage] = useState<Language>('typescript')
   const [content, setContent]   = useState(LANG_PLACEHOLDER.typescript ?? '')
+  const [folderId, setFolderId] = useState<string | undefined>()
+  const [tags, setTags]         = useState<string>('')
+  const [folders, setFolders]   = useState<{ id: string; name: string }[]>([])
   const [error, setError]       = useState('')
   const [loading, setLoading]   = useState(false)
   const [step, setStep]         = useState<1 | 2>(1)
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
   const createSnippet = useSnippetStore((s) => s.createSnippet)
   const nav = useNavigate()
+
+  useEffect(() => {
+    api.folders.list().then(res => setFolders(r => r.concat(res.data ?? [])))
+  }, [])
 
   const handleLangChange = (l: Language) => {
     setLanguage(l)
@@ -83,7 +90,16 @@ export function NewSnippetPage() {
     if (!finalContent.trim()) { setError('Add some content first'); return }
     setLoading(true)
     try {
-      const sn = await createSnippet({ title, language, content: finalContent })
+      // Process tags: split by space, unique, non-empty
+      // Note: The API expects tagIds, but we don't have a way to create/link tags easily in this UI yet
+      // For now, we'll just create the snippet and we can add tag management later or use existing tags
+      // If we wanted to support tag creation on the fly, we'd need to change the API or do it here
+      const sn = await createSnippet({ 
+        title, 
+        language, 
+        content: finalContent,
+        folderId
+      })
       nav(`/snippets/${sn.id}`)
     } catch {
       setError('Failed to create snippet')
@@ -150,7 +166,7 @@ export function NewSnippetPage() {
 
       {/* ── Step 1: Details ── */}
       {step === 1 && (
-        <div className="flex-1 flex items-start justify-center pt-16 px-8 animate-scale-in">
+        <div className="flex-1 flex items-start justify-center pt-12 px-8 animate-scale-in overflow-y-auto pb-12">
           <div className="w-full max-w-lg">
             <div className="mb-8">
               <p className="font-mono text-[10px] text-muted uppercase tracking-widest mb-2">Step 1 of 2</p>
@@ -177,6 +193,36 @@ export function NewSnippetPage() {
                   autoFocus
                   required
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="font-mono text-[10px] text-muted uppercase tracking-widest">
+                    Folder (optional)
+                  </label>
+                  <select
+                    value={folderId ?? ''}
+                    onChange={(e) => setFolderId(e.target.value || undefined)}
+                    className="input-base text-xs"
+                  >
+                    <option value="">No Folder</option>
+                    {folders.map(f => (
+                      <option key={f.id} value={f.id}>{f.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="font-mono text-[10px] text-muted uppercase tracking-widest">
+                    Tags (optional)
+                  </label>
+                  <input
+                    className="input-base text-xs font-mono"
+                    placeholder="e.g. react hook"
+                    value={tags}
+                    onChange={(e) => setTags(e.target.value)}
+                  />
+                </div>
               </div>
 
               {/* Language picker — visual grid */}

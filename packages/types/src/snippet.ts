@@ -197,7 +197,7 @@ export interface Snippet {
 
 export type SnippetSummary = Pick<
   Snippet,
-  'id' | 'title' | 'language' | 'ownerId' | 'createdAt' | 'updatedAt' | 'tags'
+  'id' | 'title' | 'content' | 'language' | 'ownerId' | 'createdAt' | 'updatedAt' | 'tags'
 >
 
 export interface CreateSnippetInput {

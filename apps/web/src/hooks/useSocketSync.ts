@@ -106,7 +106,11 @@ export function useSocketSync({
     })
 
     socket.on('snippet:delta', (delta: ContentDelta) => {
-      const update = new Uint8Array(Buffer.from(delta.update, 'base64'))
+      const binaryString = atob(delta.update)
+      const update = new Uint8Array(binaryString.length)
+      for (let i = 0; i < binaryString.length; i++) {
+        update[i] = binaryString.charCodeAt(i)
+      }
       Y.applyUpdate(ydoc, update, 'remote')
     })
 
@@ -166,8 +170,15 @@ export function useSocketSync({
     // ── Yjs → Socket.io: forward local updates ─────────────────────────────
     const handleYjsUpdate = (update: Uint8Array, origin: unknown) => {
       if (origin === 'remote') return
+      
+      let binary = ''
+      const len = update.byteLength
+      for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(update[i]!)
+      }
+      
       const delta: ContentDelta = {
-        update: Buffer.from(update).toString('base64'),
+        update: btoa(binary),
         origin: 'local',
       }
       socket.emit('snippet:delta', snippetId, delta)

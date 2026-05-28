@@ -1,5 +1,5 @@
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, forwardRef } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { api } from '@/lib/api'
 import clsx from 'clsx'
@@ -33,7 +33,7 @@ const NAV = [
   },
 ]
 
-export function Sidebar() {
+export const Sidebar = forwardRef<HTMLElement>((_, ref) => {
   const { email, logout } = useAuthStore()
   const nav = useNavigate()
   const location = useLocation()
@@ -64,10 +64,11 @@ export function Sidebar() {
 
   return (
     <aside
-      className="fixed left-0 top-0 bottom-0 flex flex-col z-50 transition-all duration-300 bg-surface border-r border-border"
+      ref={ref}
+      className="flex flex-col flex-shrink-0 z-50 transition-all duration-300 bg-surface border-r border-border h-screen sticky top-0"
       style={{ width: collapsed ? 60 : 220 }}
     >
-      {/* ── Logo ── */}
+      {/* -- Logo -- */}
       <div className="px-4 py-[18px] border-b border-border flex items-center gap-2.5 flex-shrink-0 overflow-hidden">
         <button
           onClick={() => setCollapsed((v) => !v)}
@@ -87,7 +88,7 @@ export function Sidebar() {
         )}
       </div>
 
-      {/* ── Nav ── */}
+      {/* -- Nav -- */}
       <nav className="flex-1 p-2 overflow-y-auto scrollbar-none">
         {!collapsed && (
           <p className="font-mono text-[9px] font-medium text-dim uppercase tracking-[0.14em] px-2.5 mb-1.5 mt-2">
@@ -128,7 +129,7 @@ export function Sidebar() {
           </NavLink>
         ))}
 
-        {/* ── Folders ── */}
+        {/* -- Folders -- */}
         <div className="mt-4">
           {!collapsed && (
             <div className="flex items-center justify-between px-2.5 mb-1.5">
@@ -152,7 +153,7 @@ export function Sidebar() {
                 value={newFolder}
                 onChange={(e) => setNewFolder(e.target.value)}
                 onKeyDown={(e) => e.key === 'Escape' && setAddingFolder(false)}
-                placeholder="Folder name…"
+                placeholder="Folder name�"
                 className="w-full bg-card border border-border rounded-lg px-3 py-2 text-[11px] font-mono outline-none focus:border-accent transition-colors text-white placeholder-dim"
               />
             </form>
@@ -190,7 +191,7 @@ export function Sidebar() {
         </div>
       </nav>
 
-      {/* ── Footer ── */}
+      {/* -- Footer -- */}
       <div className="p-2.5 border-t border-border flex-shrink-0">
         <div
           className={clsx(
@@ -198,7 +199,7 @@ export function Sidebar() {
             collapsed ? 'justify-center' : '',
           )}
           onClick={() => { logout(); nav('/login') }}
-          title={collapsed ? `${email} — Sign out` : undefined}
+          title={collapsed ? `${email} � Sign out` : undefined}
         >
           <div
             className="w-7 h-7 rounded-full bg-gradient-to-br from-accent to-accent2 grid place-items-center text-[10px] font-black text-black flex-shrink-0"
@@ -215,4 +216,6 @@ export function Sidebar() {
       </div>
     </aside>
   )
-}
+})
+
+Sidebar.displayName = 'Sidebar'

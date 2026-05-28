@@ -157,7 +157,7 @@ export function SnippetPage() {
         </select>
 
         {/* Save indicator */}
-        <div className="flex items-center gap-1.5 min-w-[60px] flex-shrink-0">
+        <div className="flex items-center gap-1.5 min-w-[60px] flex-shrink-0 text-right justify-end">
           {saving && (
             <span className="w-3 h-3 border border-accent/30 border-t-accent rounded-full flex-shrink-0"
               style={{ animation: 'spin 0.7s linear infinite' }} />
@@ -170,6 +170,22 @@ export function SnippetPage() {
             </span>
           )}
         </div>
+
+        {/* Copy */}
+        <button
+          onClick={() => {
+            const code = editorRef.current?.getValue() ?? ''
+            navigator.clipboard.writeText(code)
+            setSaveMsg('Copied!')
+            setTimeout(() => setSaveMsg(''), 2000)
+          }}
+          className="w-8 h-8 bg-card border border-border text-dim hover:text-white grid place-items-center rounded-lg hover:border-border2 transition-all"
+          title="Copy to clipboard"
+        >
+          <svg className="w-3.5 h-3.5" viewBox="0 0 14 14" fill="currentColor">
+            <path d="M4 2a2 2 0 012-2h2a2 2 0 012 2v1h2a2 2 0 012 2v7a2 2 0 01-2 2H2a2 2 0 01-2-2V5a2 2 0 012-2h2V2zm1 1h6V2a1 1 0 00-1-1H6a1 1 0 00-1 1v1zM2 4v8h10V4H2z"/>
+          </svg>
+        </button>
 
         {/* Theme */}
         <ThemeSwitcher value={theme} onChange={setTheme} />
