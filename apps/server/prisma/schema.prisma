@@ -18,6 +18,7 @@ model User {
   snippets      Snippet[]
   collaborations Collaborator[]
   folders       Folder[]
+  snippetCommits SnippetCommit[]
 }
 
 model Snippet {
@@ -36,9 +37,25 @@ model Snippet {
 
   tags           TagsOnSnippets[]
   collaborators  Collaborator[]
+  commits        SnippetCommit[]
 
   @@index([ownerId])
   @@index([language])
+}
+
+model SnippetCommit {
+  id        String   @id @default(cuid())
+  message   String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+
+  snippet   Snippet @relation(fields: [snippetId], references: [id], onDelete: Cascade)
+  snippetId String
+
+  author    User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String
+
+  @@index([snippetId])
 }
 
 model Tag {

@@ -1,10 +1,9 @@
 import type { Server } from 'socket.io'
-import jwt from 'jsonwebtoken'
+import { supabase } from '../lib/supabase.js'
 import type {
   ClientToServerEvents,
   ServerToClientEvents,
   SocketData,
-  UserSession,
   PeerState,
   PeerColor,
   ContentDelta,
@@ -34,13 +33,15 @@ function assignColor(snippetId: string): PeerColor {
 }
 
 export function registerSnippetSocket(io: AppServer) {
-  io.use((socket, next) => {
+  io.use(async (socket, next) => {
     const token = socket.handshake.auth['token'] as string | undefined
     if (!token) return next(new Error('Unauthorized'))
     try {
-      const secret = process.env['JWT_SECRET'] ?? 'dev-secret-change-me'
-      const session = jwt.verify(token, secret) as UserSession
-      socket.data.userId = session.userId
+      const { data, error } = await supabase.auth.getUser(token)
+      if (error || !data.user) {
+        return next(new Error('Unauthorized'))
+      }
+      socket.data.userId = data.user.id
       socket.data.snippetId = null
       next()
     } catch {

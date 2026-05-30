@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { CreateSnippetInput, UpdateSnippetInput } from '@dev-sync/types'
+import type { CreateSnippetInput, UpdateSnippetInput, CreateCommitInput } from '@dev-sync/types'
 import { useAuthStore } from '@/stores/authStore'
 
 const http = axios.create({
@@ -32,6 +32,10 @@ export const api = {
       http.post(`/snippets/${id}/collaborators`, { email, role }).then((r) => r.data),
     removeCollab: (id: string, userId: string) =>
       http.delete(`/snippets/${id}/collaborators/${userId}`).then((r) => r.data),
+    getCommits: (id: string) =>
+      http.get(`/snippets/${id}/commits`).then((r) => r.data),
+    createCommit: (id: string, data: CreateCommitInput) =>
+      http.post(`/snippets/${id}/commits`, data).then((r) => r.data),
   },
 
   tags: {

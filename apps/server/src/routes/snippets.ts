@@ -32,6 +32,69 @@ const collaboratorSchema = z.object({
   role:  z.enum(['Editor', 'Viewer']),
 })
 
+const commitSchema = z.object({
+  message: z.string().min(1).max(255),
+  content: z.string(),
+})
+
+// ── GET /api/snippets/:id/commits ──────────────────────────────────────────
+snippetsRouter.get('/:id/commits', async (req: AuthRequest, res, next) => {
+  try {
+    const userId    = req.user!.userId
+    const snippetId = req.params['id']
+    if (!snippetId) { res.status(400).json({ ok: false, error: 'Missing id' }); return }
+
+    const snippet = await prisma.snippet.findFirst({
+      where: { id: snippetId, OR: [{ ownerId: userId }, { collaborators: { some: { userId } } }] },
+    })
+    if (!snippet) { res.status(403).json({ ok: false, error: 'Forbidden' }); return }
+
+    const commits = await prisma.snippetCommit.findMany({
+      where: { snippetId },
+      orderBy: { createdAt: 'desc' },
+      include: { author: { select: { id: true, email: true, avatarUrl: true } } },
+    })
+    res.json({ ok: true, data: commits })
+  } catch (err) { next(err) }
+})
+
+// ── POST /api/snippets/:id/commits ─────────────────────────────────────────
+snippetsRouter.post('/:id/commits', async (req: AuthRequest, res, next) => {
+  try {
+    const userId    = req.user!.userId
+    const snippetId = req.params['id']
+    if (!snippetId) { res.status(400).json({ ok: false, error: 'Missing id' }); return }
+
+    const existing = await prisma.snippet.findFirst({
+      where: { id: snippetId, OR: [
+        { ownerId: userId },
+        { collaborators: { some: { userId, role: 'Editor' } } },
+      ]},
+    })
+    if (!existing) { res.status(403).json({ ok: false, error: 'Forbidden' }); return }
+
+    const body = commitSchema.parse(req.body)
+
+    const commit = await prisma.snippetCommit.create({
+      data: {
+        snippetId,
+        authorId: userId,
+        message: body.message,
+        content: body.content,
+      },
+      include: { author: { select: { id: true, email: true, avatarUrl: true } } },
+    })
+    
+    // Also update snippet content to match the new commit
+    await prisma.snippet.update({
+      where: { id: snippetId },
+      data: { content: body.content }
+    })
+
+    res.status(201).json({ ok: true, data: commit })
+  } catch (err) { next(err) }
+})
+
 // ── GET /api/snippets ──────────────────────────────────────────────────────
 snippetsRouter.get('/', async (req: AuthRequest, res, next) => {
   try {

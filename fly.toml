@@ -1,15 +1,12 @@
-# fly.toml app configuration file
-
-app = "dev_sync"
-primary_region = "yyz" # Set to Toronto based on your error log
+app = "dev-sync-server-api"
+primary_region = "yyz"
 
 [build]
-  # This tells Fly to look for a Dockerfile in the current directory
-  # If you don't have one, create one (see my previous response)
-  dockerfile = "Dockerfile"
+  dockerfile = "apps/server/Dockerfile"
+  ignorefile = ".dockerignore"
 
 [http_service]
-  internal_port = 3000 # Change this to the port your app listens on
+  internal_port = 4000
   force_https = true
   auto_stop_machines = true
   auto_start_machines = true
@@ -17,6 +14,7 @@ primary_region = "yyz" # Set to Toronto based on your error log
   processes = ["app"]
 
 [[vm]]
-  memory = "2gb"
+  memory = "1gb"
   cpu_kind = "shared"
-  cpus = 2
+  cpus = 1
+

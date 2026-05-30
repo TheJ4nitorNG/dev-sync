@@ -200,6 +200,21 @@ export type SnippetSummary = Pick<
   'id' | 'title' | 'content' | 'language' | 'ownerId' | 'createdAt' | 'updatedAt' | 'tags'
 >
 
+export interface SnippetCommit {
+  id: string
+  message: string
+  content: string
+  createdAt: Date
+  snippetId: string
+  authorId: string
+  author: Pick<import('./user').User, 'id' | 'email' | 'avatarUrl'>
+}
+
+export interface CreateCommitInput {
+  message: string
+  content: string
+}
+
 export interface CreateSnippetInput {
   title: string
   content: string

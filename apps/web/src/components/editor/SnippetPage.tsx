@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import MonacoEditor, { type OnMount, useMonaco } from '@monaco-editor/react'
+import MonacoEditor, { type OnMount, useMonaco, DiffEditor } from '@monaco-editor/react'
 import * as Y from 'yjs'
 import { useSnippetStore } from '@/stores/snippetStore'
 import { useSocketSync } from '@/hooks/useSocketSync'
@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import type { Language } from '@dev-sync/types'
 import { SUPPORTED_LANGUAGES } from '@dev-sync/types'
 import { CollaboratorPanel } from './CollaboratorPanel'
+import { CommitsPanel } from './CommitsPanel'
 import { ThemeSwitcher, registerCustomThemes } from './ThemeSwitcher'
 
 export function SnippetPage() {
@@ -24,6 +25,8 @@ export function SnippetPage() {
   const [saving, setSaving]             = useState(false)
   const [saveMsg, setSaveMsg]           = useState('')
   const [showCollabPanel, setShowCollab] = useState(false)
+  const [showCommitsPanel, setShowCommits] = useState(false)
+  const [diffContent, setDiffContent]   = useState<string | null>(null)
   const [seeded, setSeeded]             = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -190,9 +193,25 @@ export function SnippetPage() {
         {/* Theme */}
         <ThemeSwitcher value={theme} onChange={setTheme} />
 
+        {/* History / Commits */}
+        <button
+          onClick={() => { setShowCommits((v) => !v); setShowCollab(false); }}
+          className={`flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-all ${
+            showCommitsPanel
+              ? 'bg-accent/10 text-accent border-accent/30'
+              : 'bg-card border-border text-muted hover:text-white hover:border-border2'
+          }`}
+        >
+          <svg className="w-3 h-3" viewBox="0 0 14 14" fill="currentColor">
+            <path d="M7 1v4l2.5-2.5L7 1z" />
+            <path d="M7 13A6 6 0 101 7h2a4 4 0 114 4v2z" />
+          </svg>
+          History
+        </button>
+
         {/* Invite */}
         <button
-          onClick={() => setShowCollab((v) => !v)}
+          onClick={() => { setShowCollab((v) => !v); setShowCommits(false); }}
           className={`flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-all ${
             showCollabPanel
               ? 'bg-accent/10 text-accent border-accent/30'
@@ -237,40 +256,75 @@ export function SnippetPage() {
 
       {/* ── Editor + collab panel ── */}
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 overflow-hidden">
-          <MonacoEditor
-            height="100%"
-            language={language === 'c#' ? 'csharp' : language === 'c++' ? 'cpp' : language === 'gml' ? 'plaintext' : language}
-            theme={theme}
-            defaultValue={activeSnippet.content}
-            onMount={handleMount}
-            options={{
-              fontSize: 13,
-              fontFamily: "'Azeret Mono', monospace",
-              fontLigatures: true,
-              minimap: { enabled: false },
-              padding: { top: 20, bottom: 20 },
-              lineNumbers: 'on',
-              renderLineHighlight: 'gutter',
-              scrollBeyondLastLine: false,
-              wordWrap: 'on',
-              tabSize: 2,
-              automaticLayout: true,
-              cursorBlinking: 'smooth',
-              smoothScrolling: true,
-              contextmenu: true,
-              bracketPairColorization: { enabled: true },
-              suggest: { preview: true },
-            }}
-          />
+        <div className="flex-1 overflow-hidden relative">
+          {diffContent !== null ? (
+            <DiffEditor
+              height="100%"
+              language={language === 'c#' ? 'csharp' : language === 'c++' ? 'cpp' : language === 'gml' ? 'plaintext' : language}
+              theme={theme}
+              original={diffContent}
+              modified={editorRef.current?.getValue() ?? activeSnippet.content}
+              options={{
+                fontSize: 13,
+                fontFamily: "'Azeret Mono', monospace",
+                fontLigatures: true,
+                minimap: { enabled: false },
+                padding: { top: 20, bottom: 20 },
+                lineNumbers: 'on',
+                renderLineHighlight: 'gutter',
+                scrollBeyondLastLine: false,
+                wordWrap: 'on',
+                automaticLayout: true,
+                smoothScrolling: true,
+                readOnly: true,
+              }}
+            />
+          ) : (
+            <MonacoEditor
+              height="100%"
+              language={language === 'c#' ? 'csharp' : language === 'c++' ? 'cpp' : language === 'gml' ? 'plaintext' : language}
+              theme={theme}
+              defaultValue={activeSnippet.content}
+              onMount={handleMount}
+              options={{
+                fontSize: 13,
+                fontFamily: "'Azeret Mono', monospace",
+                fontLigatures: true,
+                minimap: { enabled: false },
+                padding: { top: 20, bottom: 20 },
+                lineNumbers: 'on',
+                renderLineHighlight: 'gutter',
+                scrollBeyondLastLine: false,
+                wordWrap: 'on',
+                tabSize: 2,
+                automaticLayout: true,
+                cursorBlinking: 'smooth',
+                smoothScrolling: true,
+                contextmenu: true,
+                bracketPairColorization: { enabled: true },
+                suggest: { preview: true },
+              }}
+            />
+          )}
         </div>
 
         {showCollabPanel && (
-          <div className="animate-slide-right">
+          <div className="animate-slide-right h-full">
             <CollaboratorPanel
               snippetId={id!}
               collaborators={activeSnippet.collaborators}
               onClose={() => setShowCollab(false)}
+            />
+          </div>
+        )}
+
+        {showCommitsPanel && (
+          <div className="animate-slide-right h-full">
+            <CommitsPanel
+              snippetId={id!}
+              getCurrentContent={() => editorRef.current?.getValue() ?? ydoc.getText('content').toString()}
+              onClose={() => { setShowCommits(false); setDiffContent(null); }}
+              onViewDiff={setDiffContent}
             />
           </div>
         )}
