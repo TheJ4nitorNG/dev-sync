@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import MonacoEditor, { type OnMount, useMonaco, DiffEditor } from '@monaco-editor/react'
 import * as Y from 'yjs'
 import { useSnippetStore } from '@/stores/snippetStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useSocketSync } from '@/hooks/useSocketSync'
 import { api } from '@/lib/api'
 import type { Language } from '@dev-sync/types'
@@ -16,20 +17,26 @@ export function SnippetPage() {
   const nav     = useNavigate()
   const monaco  = useMonaco()
 
-  const { activeSnippet, loading, fetchSnippet } = useSnippetStore()
+  const { activeSnippet, loading, fetchSnippet, saveSnippet, unsaveSnippet } = useSnippetStore()
+  const userId = useAuthStore((s) => s.userId)
+  
   const ydoc    = useRef(new Y.Doc()).current
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
 
   const [theme, setTheme]               = useState('vs-dark')
   const [language, setLanguage]         = useState<Language>(activeSnippet?.language as Language || 'typescript')
   const [saving, setSaving]             = useState(false)
+  const [bookmarking, setBookmarking]   = useState(false)
   const [saveMsg, setSaveMsg]           = useState('')
   const [showCollabPanel, setShowCollab] = useState(false)
   const [showCommitsPanel, setShowCommits] = useState(false)
   const [diffConfig, setDiffConfig]       = useState<{ original: string; modified: string; title: string } | null>(null)
   const [initialSnapshot, setInitialSnapshot] = useState<string>('')
-  const [seeded, setSeeded]             = useState(false)
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  
+  const isOwner = activeSnippet?.ownerId === userId
+  const isSaved = useMemo(() => 
+    activeSnippet?.savedBy?.some((sv) => sv.userId === userId) ?? false
+  , [activeSnippet?.savedBy, userId])
 
   // Register custom Monaco themes once monaco is ready
   useEffect(() => {
@@ -61,7 +68,7 @@ export function SnippetPage() {
     editorRef,
   })
 
-  // ── Manual save ───────────────────────────────────────────────────────────
+  // ── Manual save (update content) ─────────────────────────────────────────
   const handleSave = useCallback(async () => {
     if (!id) return
     setSaving(true)
@@ -76,6 +83,18 @@ export function SnippetPage() {
       setSaving(false)
     }
   }, [id, language, ydoc])
+
+  // ── Toggle Bookmark (Save to collection) ─────────────────────────────────
+  const handleToggleBookmark = async () => {
+    if (!id || bookmarking) return
+    setBookmarking(true)
+    try {
+      if (isSaved) await unsaveSnippet(id)
+      else await saveSnippet(id)
+    } finally {
+      setBookmarking(false)
+    }
+  }
 
   const handleMount: OnMount = (editor) => {
     editorRef.current = editor
@@ -145,6 +164,20 @@ export function SnippetPage() {
           {SUPPORTED_LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
         </select>
 
+        {/* Bookmark/Save to Collection */}
+        <button
+          onClick={handleToggleBookmark}
+          disabled={bookmarking}
+          className={`flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-lg border transition-all ${
+            isSaved 
+              ? 'bg-accent/10 text-accent border-accent/30' 
+              : 'bg-card border-border text-muted hover:text-white hover:border-border2'
+          }`}
+          title={isSaved ? 'Remove from collection' : 'Save to collection'}
+        >
+          {bookmarking ? '…' : isSaved ? '★ Saved' : '☆ Save'}
+        </button>
+
         {/* Save indicator */}
         <div className="flex items-center gap-1.5 min-w-[60px] flex-shrink-0 text-right justify-end">
           {saving && (
@@ -160,14 +193,16 @@ export function SnippetPage() {
           )}
         </div>
 
-        {/* Save */}
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="btn-accent px-4 py-1.5 text-[10px] flex-shrink-0 disabled:opacity-50"
-        >
-          {saving ? 'Saving...' : 'Save Snippet'}
-        </button>
+        {/* Save (Update Content) */}
+        {isOwner && (
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-accent px-4 py-1.5 text-[10px] flex-shrink-0 disabled:opacity-50"
+          >
+            {saving ? 'Saving...' : 'Update Content'}
+          </button>
+        )}
 
         {/* Copy */}
         <button
