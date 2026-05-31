@@ -38,6 +38,22 @@ const commitSchema = z.object({
   originalContent: z.string(),
 })
 
+// ── GET /api/snippets/:id ──────────────────────────────────────────────────
+snippetsRouter.get('/:id', async (req: AuthRequest, res, next) => {
+  try {
+    const userId    = req.user!.userId
+    const snippetId = req.params['id']
+    if (!snippetId) { res.status(400).json({ ok: false, error: 'Missing id' }); return }
+
+    const snippet = await prisma.snippet.findFirst({
+      where: { id: snippetId, OR: [{ ownerId: userId }, { collaborators: { some: { userId } } }] },
+      select: snippetSelect,
+    })
+    if (!snippet) { res.status(404).json({ ok: false, error: 'Not found' }); return }
+    res.json({ ok: true, data: snippet })
+  } catch (err) { next(err) }
+})
+
 // ── GET /api/snippets/:id/commits ──────────────────────────────────────────
 snippetsRouter.get('/:id/commits', async (req: AuthRequest, res, next) => {
   try {
@@ -94,49 +110,6 @@ snippetsRouter.post('/:id/commits', async (req: AuthRequest, res, next) => {
     })
 
     res.status(201).json({ ok: true, data: commit })
-  } catch (err) { next(err) }
-})
-
-// ── GET /api/snippets ──────────────────────────────────────────────────────
-snippetsRouter.get('/', async (req: AuthRequest, res, next) => {
-  try {
-    const userId = req.user!.userId
-    const q        = typeof req.query['q']        === 'string' ? req.query['q']        : undefined
-    const language = typeof req.query['language'] === 'string' ? req.query['language'] : undefined
-    const tag      = typeof req.query['tag']      === 'string' ? req.query['tag']      : undefined
-    const folder   = typeof req.query['folder']   === 'string' ? req.query['folder']   : undefined
-
-    const snippets = await prisma.snippet.findMany({
-      where: {
-        OR: [{ ownerId: userId }, { collaborators: { some: { userId } } }],
-        ...(language ? { language } : {}),
-        ...(folder   ? { folderId: folder } : {}),
-        ...(q ? { OR: [
-          { title:   { contains: q, mode: 'insensitive' } },
-          { content: { contains: q, mode: 'insensitive' } },
-        ]} : {}),
-        ...(tag ? { tags: { some: { tag: { name: { equals: tag, mode: 'insensitive' } } } } } : {}),
-      },
-      select: snippetSelect,
-      orderBy: { updatedAt: 'desc' },
-    })
-    res.json({ ok: true, data: snippets })
-  } catch (err) { next(err) }
-})
-
-// ── GET /api/snippets/:id ──────────────────────────────────────────────────
-snippetsRouter.get('/:id', async (req: AuthRequest, res, next) => {
-  try {
-    const userId    = req.user!.userId
-    const snippetId = req.params['id']
-    if (!snippetId) { res.status(400).json({ ok: false, error: 'Missing id' }); return }
-
-    const snippet = await prisma.snippet.findFirst({
-      where: { id: snippetId, OR: [{ ownerId: userId }, { collaborators: { some: { userId } } }] },
-      select: snippetSelect,
-    })
-    if (!snippet) { res.status(404).json({ ok: false, error: 'Not found' }); return }
-    res.json({ ok: true, data: snippet })
   } catch (err) { next(err) }
 })
 
