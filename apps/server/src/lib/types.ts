@@ -1,9 +1,9 @@
 // -----------------------------------------------------------------------------
-// Inlined shared types � keeps the server self-contained during build.
+// Inlined shared types — keeps the server self-contained during build.
 // The canonical source remains packages/types (used by the web app).
 // -----------------------------------------------------------------------------
- 
-// -- User ------------------------------------------------------------------  
+
+// -- User ------------------------------------------------------------------
 export interface User {
   id: string
   email: string
@@ -20,7 +20,7 @@ export interface UserSession {
   exp: number
 }
 
-// -- Snippet --------------------------------------------------------------     
+// -- Snippet --------------------------------------------------------------
 export const SUPPORTED_LANGUAGES = [
   'typescript',
   'javascript',
@@ -49,7 +49,7 @@ export const SUPPORTED_LANGUAGES = [
   'angelscript',
   'chip-8',
   'coffeescript',
-  'cython',
+  'cython',  
   'emerald',
   'euphoria',
   'f#',
@@ -182,9 +182,14 @@ export const SUPPORTED_LANGUAGES = [
 ] as const
 
 export type Language = (typeof SUPPORTED_LANGUAGES)[number]
+
 export type CollaboratorRole = 'Editor' | 'Viewer'
 
-export interface Tag { id: string; name: string; color: string }
+export interface Tag {
+  id: string
+  name: string
+  color: string
+}
 
 export interface Collaborator {
   userId: string
@@ -193,55 +198,135 @@ export interface Collaborator {
   user: Pick<User, 'id' | 'email' | 'avatarUrl'>
 }
 
-export interface Folder { id: string; name: string; userId: string }
+export interface Folder {
+  id: string
+  name: string
+  userId: string
+}
 
 export interface Snippet {
-  id: string; title: string; content: string; language: Language
-  ownerId: string; folderId: string | null; createdAt: Date; updatedAt: Date
-  tags: Tag[]; collaborators: Collaborator[]
+  id: string
+  title: string
+  content: string
+  language: Language
+  ownerId: string
+  folderId: string | null
+  createdAt: Date
+  updatedAt: Date
+  tags: Tag[]
+  collaborators: Collaborator[]
   owner: Pick<User, 'id' | 'email' | 'avatarUrl'>
 }
 
+export type SnippetSummary = Pick<
+  Snippet,
+  'id' | 'title' | 'content' | 'language' | 'ownerId' | 'createdAt' | 'updatedAt' | 'tags'
+>
+
+export interface SnippetCommit {
+  id: string
+  message: string
+  content: string
+  originalContent: string
+  createdAt: Date
+  snippetId: string
+  authorId: string
+  author: Pick<User, 'id' | 'email' | 'avatarUrl'>
+}
+
+export interface CreateCommitInput {
+  message: string
+  content: string
+  originalContent: string
+}
+
 export interface CreateSnippetInput {
-  title: string; content: string; language: Language
-  folderId?: string; tagIds?: string[]
+  title: string
+  content: string
+  language: Language
+  folderId?: string
+  tagIds?: string[]
 }
 
 export interface UpdateSnippetInput {
-  title?: string; content?: string; language?: Language
-  folderId?: string | null; tagIds?: string[]
+  title?: string
+  content?: string
+  language?: Language
+  folderId?: string | null
+  tagIds?: string[]
 }
 
 // -- Collaboration ---------------------------------------------------------
-export interface CursorPosition { lineNumber: number; column: number }
+export interface CursorPosition {
+  lineNumber: number
+  column: number
+}
 
+/** Assigned per-peer so each cursor renders a distinct color in the editor */
 export const PEER_COLORS = [
-  '#a78bfa', '#4dc9ff', '#ffca3a', '#ff6b6b', '#34d399', '#f472b6',
+  '#a78bfa', // purple
+  '#4dc9ff', // blue
+  '#ffca3a', // yellow
+  '#ff6b6b', // red
+  '#34d399', // green
+  '#f472b6', // pink
 ] as const
 
 export type PeerColor = (typeof PEER_COLORS)[number]
 
 export interface PeerState {
-  userId: string; user: PublicUser
-  cursor: CursorPosition | null; color: PeerColor; joinedAt: string
+  userId: string
+  user: PublicUser
+  cursor: CursorPosition | null
+  color: PeerColor
+  /** ISO string */
+  joinedAt: string
 }
 
-export interface ContentDelta { update: string; origin: string }
+export interface ContentDelta {
+  /** Yjs update encoded as base64 */
+  update: string
+  origin: string
+}
 
 // -- Socket events ---------------------------------------------------------
 export interface ClientToServerEvents {
-  'snippet:join':  (snippetId: string, hasDoc?: boolean) => void
-  'snippet:leave': (snippetId: string) => void
-  'snippet:delta': (snippetId: string, delta: ContentDelta) => void
-  'cursor:move':   (snippetId: string, position: CursorPosition) => void
+  'snippet:join':   (snippetId: string, hasDoc?: boolean) => void
+  'snippet:leave':  (snippetId: string) => void
+  'snippet:delta':  (snippetId: string, delta: ContentDelta) => void
+  'cursor:move':    (snippetId: string, position: CursorPosition) => void
 }
 
 export interface ServerToClientEvents {
-  'snippet:load':  (updateBase64: string) => void
-  'snippet:delta': (delta: ContentDelta) => void
-  'peers:update':  (peers: PeerState[]) => void
-  'cursor:update': (userId: string, position: CursorPosition | null) => void
-  'error':         (message: string) => void
+  'snippet:load':   (updateBase64: string) => void
+  'snippet:delta':  (delta: ContentDelta) => void
+  'peers:update':   (peers: PeerState[]) => void
+  'cursor:update':  (userId: string, position: CursorPosition | null) => void
+  'error':          (message: string) => void
 }
 
-export interface SocketData { userId: string; snippetId: string | null }
+export interface SocketData {
+  userId: string
+  snippetId: string | null
+}
+
+// -- API responses ---------------------------------------------------------
+export interface ApiSuccess<T> {
+  ok: true
+  data: T
+}
+
+export interface ApiError {
+  ok: false
+  error: string
+  code?: string
+}
+
+export type ApiResponse<T> = ApiSuccess<T> | ApiError
+
+export interface PaginatedResult<T> {
+  items: T[]
+  total: number
+  page: number
+  pageSize: number
+}
