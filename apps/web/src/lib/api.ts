@@ -12,8 +12,20 @@ const http = axios.create({
 http.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token
   if (token) config.headers.Authorization = `Bearer ${token}`
+  console.log(`[API Request] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`)
   return config
 })
+
+http.interceptors.response.use(
+  (res) => {
+    console.log(`[API Response] ${res.status} ${res.config.url}`)
+    return res
+  },
+  (err) => {
+    console.error(`[API Error] ${err.response?.status || 'Network Error'} ${err.config?.url}:`, err.response?.data || err.message)
+    return Promise.reject(err)
+  }
+)
 
 export const api = {
   auth: {
@@ -24,6 +36,7 @@ export const api = {
 
   users: {
     list: () => http.get('users').then((r) => r.data),
+    getSaved: (userId: string) => http.get(`users/${userId}/saved`).then((r) => r.data),
   },
 
   messages: {

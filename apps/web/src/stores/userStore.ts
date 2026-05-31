@@ -1,16 +1,19 @@
 import { create } from 'zustand'
 import { api } from '@/lib/api'
-import type { User } from '@dev-sync/types'
+import type { User, SnippetSummary } from '@dev-sync/types'
 
 interface UserState {
-  users: User[]
+  users: (User & { _count: { snippets: number; savedSnippets: number } })[]
   loading: boolean
+  userSavedSnippets: Record<string, SnippetSummary[]>
   fetchUsers: () => Promise<void>
+  fetchUserSaved: (userId: string) => Promise<void>
 }
 
-export const useUserStore = create<UserState>((set) => ({
+export const useUserStore = create<UserState>((set, get) => ({
   users: [],
   loading: false,
+  userSavedSnippets: {},
 
   fetchUsers: async () => {
     set({ loading: true })
@@ -20,5 +23,14 @@ export const useUserStore = create<UserState>((set) => ({
     } catch {
       set({ loading: false })
     }
+  },
+
+  fetchUserSaved: async (userId) => {
+    try {
+      const res = await api.users.getSaved(userId)
+      set((s) => ({
+        userSavedSnippets: { ...s.userSavedSnippets, [userId]: res.data }
+      }))
+    } catch {}
   },
 }))

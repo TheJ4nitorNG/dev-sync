@@ -9,15 +9,18 @@ export const authRouter = Router()
 authRouter.post('/sync', authenticate, async (req: AuthRequest, res, next) => {
   try {
     const { userId, email } = req.user!
+    console.log(`[AuthSync] Syncing user ${email} (${userId})`)
     
     const user = await prisma.user.upsert({
       where: { id: userId },
       update: { email },
-      create: { id: userId, email, passwordHash: '' }, // No password hash needed for OAuth/Supabase users
+      create: { id: userId, email, passwordHash: '' },
     })
     
+    console.log(`[AuthSync] Success for ${email}`)
     res.json({ ok: true, data: user })
   } catch (err) {
+    console.error(`[AuthSync] Error for ${req.user?.email}:`, err)
     next(err)
   }
 })
@@ -31,6 +34,7 @@ authRouter.patch('/profile', authenticate, async (req: AuthRequest, res, next) =
   try {
     const { userId } = req.user!
     const body = profileSchema.parse(req.body)
+    console.log(`[ProfileUpdate] Updating user ${userId}:`, body)
 
     const user = await prisma.user.update({
       where: { id: userId },
@@ -41,8 +45,10 @@ authRouter.patch('/profile', authenticate, async (req: AuthRequest, res, next) =
       select: { id: true, email: true, username: true, bioStatus: true, avatarUrl: true }
     })
 
+    console.log(`[ProfileUpdate] Success for ${userId}`)
     res.json({ ok: true, data: user })
   } catch (err) {
+    console.error(`[ProfileUpdate] Error for ${req.user?.userId}:`, err)
     next(err)
   }
 })

@@ -25,7 +25,9 @@ export function UserPage() {
       setMsg('Profile updated successfully!')
       setTimeout(() => setMsg(''), 3000)
     } catch (err: any) {
-      setMsg(`Error: ${err.response?.data?.error || 'Update failed'}`)
+      console.error('[UserPage] Update failed:', err)
+      const errorMsg = err.response?.data?.error || err.message || 'Update failed'
+      setMsg(`Error: ${errorMsg}`)
     } finally {
       setIsUpdating(false)
     }

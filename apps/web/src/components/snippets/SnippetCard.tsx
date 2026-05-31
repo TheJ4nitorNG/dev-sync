@@ -161,7 +161,13 @@ export function SnippetCard({ snippet, index, listView }: SnippetCardProps) {
           <p className="font-bold text-sm text-white truncate tracking-tight leading-tight">
             {snippet.title}
           </p>
-          <p className="font-mono text-[10px] text-muted mt-0.5">{snippet.language}</p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="font-mono text-[9px] text-muted">{snippet.language}</p>
+            <span className="w-1 h-1 rounded-full bg-border" />
+            <p className="font-mono text-[9px] text-accent/70 uppercase tracking-wider">
+              {snippet.owner?.username || snippet.owner?.email.split('@')[0]}
+            </p>
+          </div>
         </div>
 
         {/* Hover Actions */}
