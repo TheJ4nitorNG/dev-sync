@@ -52,7 +52,7 @@ messagesRouter.post('/', authenticate, async (req: AuthRequest, res, next) => {
   try {
     const senderId = req.user!.userId
     const { receiverId, content } = z.object({
-      receiverId: z.string().cuid(),
+      receiverId: z.string(), // Support UUIDs from Supabase
       content: z.string().min(1),
     }).parse(req.body)
 

@@ -27,7 +27,7 @@ const createSchema = z.object({
   title:    z.string().min(1).max(120),
   content:  z.string(),
   language: z.enum(SUPPORTED_LANGUAGES),
-  folderId: z.string().cuid().optional(),
+  folderId: z.string().optional(),
   tagIds:   z.array(z.string()).optional(),
 })
 
@@ -92,7 +92,7 @@ snippetsRouter.post('/:id/save', async (req: AuthRequest, res, next) => {
   try {
     const userId    = req.user!.userId
     const snippetId = req.params['id']
-    const { folderId } = z.object({ folderId: z.string().cuid().optional() }).parse(req.body)
+    const { folderId } = z.object({ folderId: z.string().optional() }).parse(req.body)
 
     if (!snippetId) { res.status(400).json({ ok: false, error: 'Missing id' }); return }
 
