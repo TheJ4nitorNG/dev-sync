@@ -21,7 +21,7 @@ export const api = {
   },
 
   snippets: {
-    list:   (params?: { q?: string; language?: string; tag?: string; folder?: string }) =>
+    list:   (params?: { q?: string; language?: string; tag?: string; folder?: string; saved?: boolean }) =>
       http.get('snippets', { params }).then((r) => r.data),
     get:    (id: string) => http.get(`snippets/${id}`).then((r) => r.data),
     create: (data: CreateSnippetInput) => http.post('snippets', data).then((r) => r.data),
@@ -36,6 +36,10 @@ export const api = {
       http.get(`snippets/${id}/commits`).then((r) => r.data),
     createCommit: (id: string, data: CreateCommitInput) =>
       http.post(`snippets/${id}/commits`, data).then((r) => r.data),
+    save: (id: string, folderId?: string) =>
+      http.post(`snippets/${id}/save`, { folderId }).then((r) => r.data),
+    unsave: (id: string) =>
+      http.delete(`snippets/${id}/save`).then((r) => r.data),
   },
 
   tags: {

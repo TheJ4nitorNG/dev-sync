@@ -19,6 +19,7 @@ model User {
   collaborations Collaborator[]
   folders       Folder[]
   snippetCommits SnippetCommit[]
+  savedSnippets SavedSnippet[]
 }
 
 model Snippet {
@@ -38,9 +39,27 @@ model Snippet {
   tags           TagsOnSnippets[]
   collaborators  Collaborator[]
   commits        SnippetCommit[]
+  savedBy        SavedSnippet[]
 
   @@index([ownerId])
   @@index([language])
+}
+
+model SavedSnippet {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+
+  snippet   Snippet  @relation(fields: [snippetId], references: [id], onDelete: Cascade)
+  snippetId String
+
+  folder    Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  folderId  String?
+
+  @@unique([userId, snippetId])
+  @@index([userId])
 }
 
 model SnippetCommit {
@@ -92,6 +111,7 @@ model Folder {
   user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
   snippets Snippet[]
+  savedSnippets SavedSnippet[]
 
   @@unique([userId, name])
 }

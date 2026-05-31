@@ -6,12 +6,13 @@ import { SUPPORTED_LANGUAGES, type Language } from '@dev-sync/types'
 import { useAuthStore } from '@/stores/authStore'
 
 type LangFilter = Language | 'all'
+type Tab = 'all' | 'saved'
 
 const STAT_CARDS = [
   { label: 'Total Snippets', key: 'total',   color: '#4fffb0' },
   { label: 'Languages',      key: 'langs',   color: '#4dc9ff' },
   { label: 'Tags Used',      key: 'tags',    color: '#a78bfa' },
-  { label: 'Shared',         key: 'shared',  color: '#ffca3a' },
+  { label: 'Saved Items',    key: 'saved',   color: '#ffca3a' },
 ]
 
 function useDebounce<T>(value: T, ms: number) {
@@ -25,10 +26,11 @@ function useDebounce<T>(value: T, ms: number) {
 
 export function DashboardPage() {
   const { snippets, loading, fetchSnippets } = useSnippetStore()
-  const { email } = useAuthStore()
+  const { email, userId } = useAuthStore()
   const nav = useNavigate()
   const location = useLocation()
 
+  const [activeTab, setActiveTab] = useState<Tab>('all')
   const [search, setSearch]       = useState('')
   const [lang, setLang]           = useState<LangFilter>('all')
   const [view, setView]           = useState<'grid' | 'list'>('grid')
@@ -41,8 +43,9 @@ export function DashboardPage() {
     if (debouncedSearch) params.q = debouncedSearch
     if (lang !== 'all')  params.language = lang
     if (folderParam)     params.folder = folderParam
+    if (activeTab === 'saved') params.saved = true
     fetchSnippets(params)
-  }, [debouncedSearch, lang, folderParam, fetchSnippets])
+  }, [debouncedSearch, lang, folderParam, activeTab, fetchSnippets])
 
   useEffect(() => { load() }, [load])
 
@@ -51,7 +54,7 @@ export function DashboardPage() {
     total:  snippets.length,
     langs:  new Set(snippets.map((s) => s.language)).size,
     tags:   new Set(snippets.flatMap((s) => s.tags.map((t) => t.id))).size,
-    shared: snippets.filter((s) => s.tags.length > 0).length, // placeholder
+    saved:  snippets.filter((s) => s.savedBy?.some((sv) => sv.userId === userId)).length,
   }
 
   const greeting = () => {
@@ -60,8 +63,6 @@ export function DashboardPage() {
     if (h < 17) return 'Good afternoon'
     return 'Good evening'
   }
-
-  const firstName = email?.split('@')[0] ?? 'dev'
 
   return (
     <div className="flex-1 flex flex-col min-h-screen">
@@ -88,6 +89,23 @@ export function DashboardPage() {
               ×
             </button>
           )}
+        </div>
+
+        {/* Tab Toggle */}
+        <div className="flex items-center bg-card border border-border rounded-lg p-0.5 gap-0.5 ml-4">
+          {(['all', 'saved'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setActiveTab(t)}
+              className={`px-4 py-1.5 rounded-md text-[10px] font-bold transition-all uppercase tracking-wider ${
+                activeTab === t
+                  ? 'bg-accent text-black'
+                  : 'text-dim hover:text-white'
+              }`}
+            >
+              {t === 'all' ? 'All Snippets' : 'My Collection'}
+            </button>
+          ))}
         </div>
 
         <div className="flex-1" />
@@ -129,10 +147,13 @@ export function DashboardPage() {
               <div>
                 <p className="text-muted font-mono text-xs mb-1">{greeting()},</p>
                 <h1 className="text-3xl font-extrabold tracking-tight">
-                  Discover snippets<span className="text-accent">.</span>
+                  {activeTab === 'all' ? 'Discover snippets' : 'Your collection'}<span className="text-accent">.</span>
                 </h1>
                 <p className="text-dim font-mono text-[10px] mt-2 max-w-md leading-relaxed uppercase tracking-wider">
-                  The central repository for your team's most valuable logic and architectural patterns.
+                  {activeTab === 'all' 
+                    ? "The central repository for your team's most valuable logic and architectural patterns."
+                    : "Manage your personal collection of bookmarked snippets and architectural patterns."
+                  }
                 </p>
               </div>
 
@@ -220,21 +241,23 @@ export function DashboardPage() {
         ) : snippets.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center py-20 animate-scale-in">
             <div className="w-20 h-20 rounded-3xl bg-card border border-border grid place-items-center mb-5">
-              <span className="text-3xl">{'</>'}</span>
+              <span className="text-3xl">{activeTab === 'all' ? '</>' : '★'}</span>
             </div>
             <p className="font-extrabold text-base tracking-tight mb-1.5">
               {debouncedSearch || lang !== 'all'
                 ? 'No snippets match'
-                : 'No snippets yet'}
+                : activeTab === 'all' ? 'No snippets yet' : 'Your collection is empty'}
             </p>
             <p className="text-muted font-mono text-xs mb-6">
               {debouncedSearch
                 ? `Nothing found for "${debouncedSearch}"`
                 : lang !== 'all'
                   ? `No ${lang} snippets found`
-                  : 'Create your first snippet to get started'}
+                  : activeTab === 'all' 
+                    ? 'Create your first snippet to get started'
+                    : 'Save snippets you like to see them here'}
             </p>
-            {!debouncedSearch && lang === 'all' && (
+            {!debouncedSearch && lang === 'all' && activeTab === 'all' && (
               <button
                 onClick={() => nav('/snippets/new')}
                 className="btn-accent px-6 py-2.5 text-sm"

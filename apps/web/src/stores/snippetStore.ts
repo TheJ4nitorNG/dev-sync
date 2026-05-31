@@ -1,12 +1,14 @@
 import { create } from 'zustand'
 import type { Snippet, SnippetSummary, CreateSnippetInput, Language } from '@dev-sync/types'
 import { api } from '@/lib/api'
+import { useAuthStore } from './authStore'
 
 interface FetchParams {
   q?: string
   language?: Language
   tag?: string
   folder?: string
+  saved?: boolean
 }
 
 interface SnippetState {
@@ -17,6 +19,8 @@ interface SnippetState {
   fetchSnippet: (id: string) => Promise<void>
   createSnippet: (data: CreateSnippetInput) => Promise<Snippet>
   deleteSnippet: (id: string) => Promise<void>
+  saveSnippet: (id: string, folderId?: string) => Promise<void>
+  unsaveSnippet: (id: string) => Promise<void>
 }
 
 export const useSnippetStore = create<SnippetState>((set) => ({
@@ -67,5 +71,48 @@ export const useSnippetStore = create<SnippetState>((set) => ({
       snippets: s.snippets.filter((sn) => sn.id !== id),
       activeSnippet: s.activeSnippet?.id === id ? null : s.activeSnippet,
     }))
+  },
+
+  saveSnippet: async (id, folderId) => {
+    await api.snippets.save(id, folderId)
+    const userId = useAuthStore.getState().userId
+    if (!userId) return
+
+    set((s) => {
+      const updateSnippet = (sn: any) => {
+        if (sn.id !== id) return sn
+        const savedBy = sn.savedBy || []
+        if (savedBy.some((sv: any) => sv.userId === userId)) return sn
+        return {
+          ...sn,
+          savedBy: [...savedBy, { userId, folderId: folderId || null }]
+        }
+      }
+
+      return {
+        snippets: s.snippets.map(updateSnippet),
+        activeSnippet: s.activeSnippet?.id === id ? updateSnippet(s.activeSnippet) : s.activeSnippet
+      }
+    })
+  },
+
+  unsaveSnippet: async (id) => {
+    await api.snippets.unsave(id)
+    const userId = useAuthStore.getState().userId
+    if (!userId) return
+
+    set((s) => {
+      const updateSnippet = (sn: any) => {
+        if (sn.id !== id) return sn
+        return {
+          ...sn,
+          savedBy: (sn.savedBy || []).filter((sv: any) => sv.userId !== userId)
+        }
+      }
+      return {
+        snippets: s.snippets.map(updateSnippet),
+        activeSnippet: s.activeSnippet?.id === id ? updateSnippet(s.activeSnippet) : s.activeSnippet
+      }
+    })
   },
 }))

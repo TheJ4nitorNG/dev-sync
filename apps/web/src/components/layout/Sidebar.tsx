@@ -21,6 +21,14 @@ const NAV = [
     ),
   },
   {
+    to: '/account', label: 'Dashboard', end: false,
+    icon: (
+      <svg viewBox="0 0 14 14" fill="currentColor" className="w-3.5 h-3.5">
+        <path d="M7 0C3.13 0 0 3.13 0 7s3.13 7 7 7 7-3.13 7-7-3.13-7-7-7zm0 1.5c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm0 11c-1.84 0-3.45-.96-4.38-2.4.03-1.45 2.92-2.25 4.38-2.25 1.45 0 4.35.8 4.38 2.25-.93 1.44-2.54 2.4-4.38 2.4z"/>
+      </svg>
+    ),
+  },
+  {
     to: '/?filter=shared', label: 'Shared with me', end: false,
     icon: (
       <svg viewBox="0 0 14 14" fill="currentColor" className="w-3.5 h-3.5">
@@ -153,7 +161,7 @@ export const Sidebar = forwardRef<HTMLElement>((_, ref) => {
                 value={newFolder}
                 onChange={(e) => setNewFolder(e.target.value)}
                 onKeyDown={(e) => e.key === 'Escape' && setAddingFolder(false)}
-                placeholder="Folder name…"
+                placeholder="Folder nameâ€¦"
                 className="w-full bg-card border border-border rounded-lg px-3 py-2 text-[11px] font-mono outline-none focus:border-accent transition-colors text-white placeholder-dim"
               />
             </form>
@@ -198,8 +206,8 @@ export const Sidebar = forwardRef<HTMLElement>((_, ref) => {
             'flex items-center gap-2.5 p-2 rounded-lg hover:bg-card cursor-pointer transition-colors',
             collapsed ? 'justify-center' : '',
           )}
-          onClick={() => { logout(); nav('/login') }}
-          title={collapsed ? `${email} — Sign out` : undefined}
+          onClick={() => nav('/account')}
+          title={collapsed ? `${email} â€¢ Account` : undefined}
         >
           <div
             className="w-7 h-7 rounded-full bg-gradient-to-br from-accent to-accent2 grid place-items-center text-[10px] font-black text-black flex-shrink-0"
@@ -209,7 +217,7 @@ export const Sidebar = forwardRef<HTMLElement>((_, ref) => {
           {!collapsed && (
             <div className="flex-1 min-w-0 animate-fade-in">
               <p className="text-xs font-bold text-white truncate">{email}</p>
-              <p className="text-[9px] font-mono text-muted">Sign out</p>
+              <p className="text-[9px] font-mono text-muted uppercase tracking-widest">Account</p>
             </div>
           )}
         </div>

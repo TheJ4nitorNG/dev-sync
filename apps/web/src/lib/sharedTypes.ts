@@ -1,9 +1,9 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// Inlined shared types — keeps the server self-contained during build.
-// The canonical source remains packages/types (used by the web app).
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
+// Canonical source for shared types in Dev-Sync.
+// Used by both apps/web and packages/types (which links to here).
+// -----------------------------------------------------------------------------
 
-// ── User ─────────────────────────────────────────────────────────────────────
+// -- User ------------------------------------------------------------------
 export interface User {
   id: string
   email: string
@@ -11,7 +11,6 @@ export interface User {
   createdAt: Date
 }
 
-/** Safe subset — never include passwordHash on the wire */
 export type PublicUser = Omit<User, 'createdAt'>
 
 export interface UserSession {
@@ -21,7 +20,7 @@ export interface UserSession {
   exp: number
 }
 
-// ── Snippet ──────────────────────────────────────────────────────────────────
+// -- Snippet --------------------------------------------------------------
 export const SUPPORTED_LANGUAGES = [
   'typescript',
   'javascript',
@@ -217,11 +216,17 @@ export interface Snippet {
   tags: Tag[]
   collaborators: Collaborator[]
   owner: Pick<User, 'id' | 'email' | 'avatarUrl'>
+  savedBy: SavedSnippetSummary[]
+}
+
+export interface SavedSnippetSummary {
+  userId: string
+  folderId: string | null
 }
 
 export type SnippetSummary = Pick<
   Snippet,
-  'id' | 'title' | 'content' | 'language' | 'ownerId' | 'createdAt' | 'updatedAt' | 'tags'
+  'id' | 'title' | 'content' | 'language' | 'ownerId' | 'createdAt' | 'updatedAt' | 'tags' | 'savedBy'
 >
 
 export interface SnippetCommit {
@@ -257,7 +262,11 @@ export interface UpdateSnippetInput {
   tagIds?: string[]
 }
 
-// ── Collaboration ────────────────────────────────────────────────────────────
+export interface SaveSnippetInput {
+  folderId?: string
+}
+
+// -- Collaboration ---------------------------------------------------------
 export interface CursorPosition {
   lineNumber: number
   column: number
@@ -290,7 +299,7 @@ export interface ContentDelta {
   origin: string
 }
 
-// ── Socket events ────────────────────────────────────────────────────────────
+// -- Socket events ---------------------------------------------------------
 export interface ClientToServerEvents {
   'snippet:join':   (snippetId: string, hasDoc?: boolean) => void
   'snippet:leave':  (snippetId: string) => void
@@ -311,7 +320,7 @@ export interface SocketData {
   snippetId: string | null
 }
 
-// ── API responses ────────────────────────────────────────────────────────────
+// -- API responses ---------------------------------------------------------
 export interface ApiSuccess<T> {
   ok: true
   data: T

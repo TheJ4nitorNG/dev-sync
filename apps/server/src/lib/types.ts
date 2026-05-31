@@ -216,11 +216,17 @@ export interface Snippet {
   tags: Tag[]
   collaborators: Collaborator[]
   owner: Pick<User, 'id' | 'email' | 'avatarUrl'>
+  savedBy: SavedSnippetSummary[]
+}
+
+export interface SavedSnippetSummary {
+  userId: string
+  folderId: string | null
 }
 
 export type SnippetSummary = Pick<
   Snippet,
-  'id' | 'title' | 'content' | 'language' | 'ownerId' | 'createdAt' | 'updatedAt' | 'tags'
+  'id' | 'title' | 'content' | 'language' | 'ownerId' | 'createdAt' | 'updatedAt' | 'tags' | 'savedBy'
 >
 
 export interface SnippetCommit {
@@ -254,6 +260,10 @@ export interface UpdateSnippetInput {
   language?: Language
   folderId?: string | null
   tagIds?: string[]
+}
+
+export interface SaveSnippetInput {
+  folderId?: string
 }
 
 // -- Collaboration ---------------------------------------------------------

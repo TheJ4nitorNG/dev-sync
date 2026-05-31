@@ -17,6 +17,9 @@ const snippetSelect = {
     },
   },
   owner: { select: { id: true, email: true, avatarUrl: true } },
+  savedBy: {
+    select: { userId: true, folderId: true }
+  },
 } as const
 
 const createSchema = z.object({
@@ -41,14 +44,17 @@ const commitSchema = z.object({
 // ── GET /api/snippets ──────────────────────────────────────────────────────
 snippetsRouter.get('/', async (req: AuthRequest, res, next) => {
   try {
+    const userId = req.user?.userId
     const q        = typeof req.query['q']        === 'string' ? req.query['q']        : undefined
     const language = typeof req.query['language'] === 'string' ? req.query['language'] : undefined
     const tag      = typeof req.query['tag']      === 'string' ? req.query['tag']      : undefined
     const folder   = typeof req.query['folder']   === 'string' ? req.query['folder']   : undefined
+    const saved    = req.query['saved']           === 'true'
 
     const snippets = await prisma.snippet.findMany({
       where: {
-        // Removed owner/collaborator restriction to make snippets public
+        // If saved=true is passed, only show snippets saved by the user
+        ...(saved && userId ? { savedBy: { some: { userId } } } : {}),
         ...(language ? { language } : {}),
         ...(folder   ? { folderId: folder } : {}),
         ...(q ? { OR: [
@@ -61,6 +67,38 @@ snippetsRouter.get('/', async (req: AuthRequest, res, next) => {
       orderBy: { updatedAt: 'desc' },
     })
     res.json({ ok: true, data: snippets })
+  } catch (err) { next(err) }
+})
+
+// ── POST /api/snippets/:id/save ───────────────────────────────────────────
+snippetsRouter.post('/:id/save', async (req: AuthRequest, res, next) => {
+  try {
+    const userId    = req.user!.userId
+    const snippetId = req.params['id']
+    const { folderId } = z.object({ folderId: z.string().cuid().optional() }).parse(req.body)
+
+    if (!snippetId) { res.status(400).json({ ok: false, error: 'Missing id' }); return }
+
+    const saved = await prisma.savedSnippet.upsert({
+      where: { userId_snippetId: { userId, snippetId } },
+      create: { userId, snippetId, folderId },
+      update: { folderId },
+    })
+    res.status(201).json({ ok: true, data: saved })
+  } catch (err) { next(err) }
+})
+
+// ── DELETE /api/snippets/:id/save ─────────────────────────────────────────
+snippetsRouter.delete('/:id/save', async (req: AuthRequest, res, next) => {
+  try {
+    const userId    = req.user!.userId
+    const snippetId = req.params['id']
+    if (!snippetId) { res.status(400).json({ ok: false, error: 'Missing id' }); return }
+
+    await prisma.savedSnippet.delete({
+      where: { userId_snippetId: { userId, snippetId } }
+    })
+    res.json({ ok: true, data: null })
   } catch (err) { next(err) }
 })
 

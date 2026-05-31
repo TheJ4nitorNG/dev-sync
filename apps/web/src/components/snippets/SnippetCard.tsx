@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 import type { SnippetSummary } from '@dev-sync/types'
 import { useSnippetStore } from '@/stores/snippetStore'
-import { useState } from 'react'
+import { useAuthStore } from '@/stores/authStore'
+import { useState, useMemo } from 'react'
 
 const LANG_STYLE: Record<string, { bg: string; fg: string; label: string }> = {
   typescript:  { bg: 'rgba(77,201,255,0.12)',  fg: '#4dc9ff', label: 'TS'   },
@@ -34,8 +35,16 @@ interface SnippetCardProps {
 
 export function SnippetCard({ snippet, index, listView }: SnippetCardProps) {
   const nav = useNavigate()
-  const deleteSnippet = useSnippetStore((s) => s.deleteSnippet)
+  const { deleteSnippet, saveSnippet, unsaveSnippet } = useSnippetStore()
+  const userId = useAuthStore((s) => s.userId)
+  
   const [deleting, setDeleting] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  const isOwner = snippet.ownerId === userId
+  const isSaved = useMemo(() => 
+    snippet.savedBy?.some((sv) => sv.userId === userId) ?? false
+  , [snippet.savedBy, userId])
 
   const lang = LANG_STYLE[snippet.language] ?? {
     bg: 'rgba(90,100,128,0.15)', fg: '#5a6480',
@@ -48,6 +57,18 @@ export function SnippetCard({ snippet, index, listView }: SnippetCardProps) {
     setDeleting(true)
     try { await deleteSnippet(snippet.id) }
     catch { setDeleting(false) }
+  }
+
+  const handleToggleSave = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (saving) return
+    setSaving(true)
+    try {
+      if (isSaved) await unsaveSnippet(snippet.id)
+      else await saveSnippet(snippet.id)
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (listView) {
@@ -83,13 +104,29 @@ export function SnippetCard({ snippet, index, listView }: SnippetCardProps) {
           <span className="font-mono text-[9px] text-dim whitespace-nowrap ml-2">
             {timeAgo(snippet.updatedAt)}
           </span>
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="opacity-0 group-hover:opacity-100 transition-opacity text-dim hover:text-accent3 w-6 h-6 grid place-items-center rounded hover:bg-accent3/10 ml-1"
-          >
-            ×
-          </button>
+
+          <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+             <button
+              onClick={handleToggleSave}
+              disabled={saving}
+              className={`w-6 h-6 grid place-items-center rounded transition-colors ${
+                isSaved ? 'text-accent bg-accent/10' : 'text-dim hover:text-white hover:bg-white/5'
+              }`}
+              title={isSaved ? 'Remove from collection' : 'Save to collection'}
+            >
+              {saving ? '…' : isSaved ? '★' : '☆'}
+            </button>
+
+            {isOwner && (
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="text-dim hover:text-accent3 w-6 h-6 grid place-items-center rounded hover:bg-accent3/10"
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -130,23 +167,31 @@ export function SnippetCard({ snippet, index, listView }: SnippetCardProps) {
         {/* Hover Actions */}
         <div className="absolute top-4 right-4 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all translate-y-1 group-hover:translate-y-0">
           <button
-            onClick={(e) => { e.stopPropagation(); alert('Saved to bookmarks!') }}
-            className="bg-accent text-black px-3 py-1 rounded-full text-[10px] font-bold hover:scale-105 transition-transform"
+            onClick={handleToggleSave}
+            disabled={saving}
+            className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all ${
+              isSaved 
+                ? 'bg-accent/20 text-accent border border-accent/30' 
+                : 'bg-accent text-black hover:scale-105'
+            }`}
           >
-            Save
+            {saving ? 'Saving…' : isSaved ? 'Saved' : 'Save'}
           </button>
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="w-7 h-7 bg-card border border-border text-dim hover:text-accent3
-                       grid place-items-center rounded-full hover:bg-accent3/10
-                       disabled:cursor-not-allowed transition-colors"
-            title="Delete"
-          >
-            {deleting ? (
-              <span className="w-3 h-3 border border-dim border-t-muted rounded-full" style={{ animation: 'spin 0.6s linear infinite' }} />
-            ) : '×'}
-          </button>
+          
+          {isOwner && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="w-7 h-7 bg-card border border-border text-dim hover:text-accent3
+                        grid place-items-center rounded-full hover:bg-accent3/10
+                        disabled:cursor-not-allowed transition-colors"
+              title="Delete"
+            >
+              {deleting ? (
+                <span className="w-3 h-3 border border-dim border-t-muted rounded-full" style={{ animation: 'spin 0.6s linear infinite' }} />
+              ) : '×'}
+            </button>
+          )}
         </div>
       </div>
 
