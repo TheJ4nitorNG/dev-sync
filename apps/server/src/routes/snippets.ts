@@ -41,7 +41,6 @@ const commitSchema = z.object({
 // ── GET /api/snippets ──────────────────────────────────────────────────────
 snippetsRouter.get('/', async (req: AuthRequest, res, next) => {
   try {
-    const userId = req.user!.userId
     const q        = typeof req.query['q']        === 'string' ? req.query['q']        : undefined
     const language = typeof req.query['language'] === 'string' ? req.query['language'] : undefined
     const tag      = typeof req.query['tag']      === 'string' ? req.query['tag']      : undefined
@@ -49,7 +48,7 @@ snippetsRouter.get('/', async (req: AuthRequest, res, next) => {
 
     const snippets = await prisma.snippet.findMany({
       where: {
-        OR: [{ ownerId: userId }, { collaborators: { some: { userId } } }],
+        // Removed owner/collaborator restriction to make snippets public
         ...(language ? { language } : {}),
         ...(folder   ? { folderId: folder } : {}),
         ...(q ? { OR: [
@@ -91,15 +90,10 @@ snippetsRouter.post('/', async (req: AuthRequest, res, next) => {
 // ── GET /api/snippets/:id/commits ──────────────────────────────────────────
 snippetsRouter.get('/:id/commits', async (req: AuthRequest, res, next) => {
   try {
-    const userId    = req.user!.userId
     const snippetId = req.params['id']
     if (!snippetId) { res.status(400).json({ ok: false, error: 'Missing id' }); return }
 
-    const snippet = await prisma.snippet.findFirst({
-      where: { id: snippetId, OR: [{ ownerId: userId }, { collaborators: { some: { userId } } }] },
-    })
-    if (!snippet) { res.status(403).json({ ok: false, error: 'Forbidden' }); return }
-
+    // Removed restriction to allow anyone to see history
     const commits = await prisma.snippetCommit.findMany({
       where: { snippetId },
       orderBy: { createdAt: 'desc' },
@@ -122,7 +116,7 @@ snippetsRouter.post('/:id/commits', async (req: AuthRequest, res, next) => {
         { collaborators: { some: { userId, role: 'Editor' } } },
       ]},
     })
-    if (!existing) { res.status(403).json({ ok: false, error: 'Forbidden' }); return }
+    if (!existing) { res.status(403).json({ ok: false, error: 'Only owners or editors can commit' }); return }
 
     const body = commitSchema.parse(req.body)
 
@@ -190,12 +184,11 @@ snippetsRouter.delete('/:id/collaborators/:collabUserId', async (req: AuthReques
 // ── GET /api/snippets/:id ──────────────────────────────────────────────────
 snippetsRouter.get('/:id', async (req: AuthRequest, res, next) => {
   try {
-    const userId    = req.user!.userId
     const snippetId = req.params['id']
     if (!snippetId) { res.status(400).json({ ok: false, error: 'Missing id' }); return }
 
     const snippet = await prisma.snippet.findFirst({
-      where: { id: snippetId, OR: [{ ownerId: userId }, { collaborators: { some: { userId } } }] },
+      where: { id: snippetId },
       select: snippetSelect,
     })
     if (!snippet) { res.status(404).json({ ok: false, error: 'Not found' }); return }
