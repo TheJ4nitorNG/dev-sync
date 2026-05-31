@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useUserStore } from '@/stores/userStore'
 import { useAuthStore } from '@/stores/authStore'
 import { SnippetCard } from '@/components/snippets/SnippetCard'
 
 export function UserListPage() {
+  const nav = useNavigate()
   const { users, loading, fetchUsers, userSavedSnippets, fetchUserSaved } = useUserStore()
   const { userId: currentUserId } = useAuthStore()
   const [search, setSearch] = useState('')
