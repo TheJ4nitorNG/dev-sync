@@ -22,7 +22,7 @@ export async function sendEmailNotification({
 
   try {
     await resend.emails.send({
-      from: 'Dev-Sync <notifications@dev-sync.app>',
+      from: 'Dev-Sync <notifications@devedit.app>',
       to,
       subject,
       html,
