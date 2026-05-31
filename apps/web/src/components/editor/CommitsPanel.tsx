@@ -25,9 +25,16 @@ export function CommitsPanel({
   const userId = useAuthStore((s) => s.userId)
 
   useEffect(() => {
+    console.log('[CommitsPanel] Fetching commits for:', snippetId)
     api.snippets.getCommits(snippetId)
-      .then((res) => setCommits(res.data))
-      .catch((e) => setError(e.message || 'Failed to load commits'))
+      .then((res) => {
+        console.log('[CommitsPanel] Commits received:', res.data)
+        setCommits(res.data)
+      })
+      .catch((e) => {
+        console.error('[CommitsPanel] Error fetching commits:', e)
+        setError(e.message || 'Failed to load commits')
+      })
   }, [snippetId])
 
   const submitCommit = async (e: React.FormEvent) => {

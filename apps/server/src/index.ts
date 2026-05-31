@@ -40,13 +40,24 @@ app.use(helmet())
 app.use(cors({ origin: allowedOrigins }))
 app.use(express.json())
 
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`)
+  next()
+})
+
 // ── Routes ───────────────────────────────────────────────────────────────────
+app.get('/api/snippets-test', (req, res) => res.json({ ok: true, msg: 'Snippets router base should be working' }))
 app.use('/api/auth', authRouter)
 app.use('/api/snippets', authenticate, snippetsRouter)
 app.use('/api/tags', authenticate, tagsRouter)
 app.use('/api/folders', authenticate, foldersRouter)
 
 app.get('/health', (_req, res) => res.json({ ok: true }))
+
+app.use((req, res) => {
+  console.log(`[404] ${req.method} ${req.url}`)
+  res.status(404).json({ ok: false, error: 'Route not found' })
+})
 
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use(errorHandler)

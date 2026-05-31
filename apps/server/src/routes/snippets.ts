@@ -38,19 +38,53 @@ const commitSchema = z.object({
   originalContent: z.string(),
 })
 
-// ── GET /api/snippets/:id ──────────────────────────────────────────────────
-snippetsRouter.get('/:id', async (req: AuthRequest, res, next) => {
+// ── GET /api/snippets ──────────────────────────────────────────────────────
+snippetsRouter.get('/', async (req: AuthRequest, res, next) => {
   try {
-    const userId    = req.user!.userId
-    const snippetId = req.params['id']
-    if (!snippetId) { res.status(400).json({ ok: false, error: 'Missing id' }); return }
+    const userId = req.user!.userId
+    const q        = typeof req.query['q']        === 'string' ? req.query['q']        : undefined
+    const language = typeof req.query['language'] === 'string' ? req.query['language'] : undefined
+    const tag      = typeof req.query['tag']      === 'string' ? req.query['tag']      : undefined
+    const folder   = typeof req.query['folder']   === 'string' ? req.query['folder']   : undefined
 
-    const snippet = await prisma.snippet.findFirst({
-      where: { id: snippetId, OR: [{ ownerId: userId }, { collaborators: { some: { userId } } }] },
+    const snippets = await prisma.snippet.findMany({
+      where: {
+        OR: [{ ownerId: userId }, { collaborators: { some: { userId } } }],
+        ...(language ? { language } : {}),
+        ...(folder   ? { folderId: folder } : {}),
+        ...(q ? { OR: [
+          { title:   { contains: q, mode: 'insensitive' } },
+          { content: { contains: q, mode: 'insensitive' } },
+        ]} : {}),
+        ...(tag ? { tags: { some: { tag: { name: { equals: tag, mode: 'insensitive' } } } } } : {}),
+      },
+      select: snippetSelect,
+      orderBy: { updatedAt: 'desc' },
+    })
+    res.json({ ok: true, data: snippets })
+  } catch (err) { next(err) }
+})
+
+// ── POST /api/snippets ─────────────────────────────────────────────────────
+snippetsRouter.post('/', async (req: AuthRequest, res, next) => {
+  try {
+    const userId = req.user!.userId
+    const body   = createSchema.parse(req.body)
+
+    const snippet = await prisma.snippet.create({
+      data: {
+        title:    body.title,
+        content:  body.content,
+        language: body.language,
+        ownerId:  userId,
+        ...(body.folderId ? { folderId: body.folderId } : {}),
+        ...(body.tagIds?.length ? {
+          tags: { create: body.tagIds.map((tagId: string) => ({ tagId })) },
+        } : {}),
+      },
       select: snippetSelect,
     })
-    if (!snippet) { res.status(404).json({ ok: false, error: 'Not found' }); return }
-    res.json({ ok: true, data: snippet })
+    res.status(201).json({ ok: true, data: snippet })
   } catch (err) { next(err) }
 })
 
@@ -113,26 +147,59 @@ snippetsRouter.post('/:id/commits', async (req: AuthRequest, res, next) => {
   } catch (err) { next(err) }
 })
 
-// ── POST /api/snippets ─────────────────────────────────────────────────────
-snippetsRouter.post('/', async (req: AuthRequest, res, next) => {
+// ── POST /api/snippets/:id/collaborators ───────────────────────────────────
+snippetsRouter.post('/:id/collaborators', async (req: AuthRequest, res, next) => {
   try {
-    const userId = req.user!.userId
-    const body   = createSchema.parse(req.body)
+    const userId    = req.user!.userId
+    const snippetId = req.params['id']
+    if (!snippetId) { res.status(400).json({ ok: false, error: 'Missing id' }); return }
 
-    const snippet = await prisma.snippet.create({
-      data: {
-        title:    body.title,
-        content:  body.content,
-        language: body.language,
-        ownerId:  userId,
-        ...(body.folderId ? { folderId: body.folderId } : {}),
-        ...(body.tagIds?.length ? {
-          tags: { create: body.tagIds.map((tagId: string) => ({ tagId })) },
-        } : {}),
-      },
+    const snippet = await prisma.snippet.findFirst({ where: { id: snippetId, ownerId: userId } })
+    if (!snippet) { res.status(403).json({ ok: false, error: 'Only the owner can invite' }); return }
+
+    const { email, role } = collaboratorSchema.parse(req.body)
+    const invitee = await prisma.user.findUnique({ where: { email } })
+    if (!invitee)              { res.status(404).json({ ok: false, error: 'User not found' }); return }
+    if (invitee.id === userId) { res.status(400).json({ ok: false, error: 'Cannot invite yourself' }); return }
+
+    const collab = await prisma.collaborator.upsert({
+      where:  { snippetId_userId: { snippetId, userId: invitee.id } },
+      create: { snippetId, userId: invitee.id, role },
+      update: { role },
+    })
+    res.status(201).json({ ok: true, data: collab })
+  } catch (err) { next(err) }
+})
+
+// ── DELETE /api/snippets/:id/collaborators/:collabUserId ───────────────────
+snippetsRouter.delete('/:id/collaborators/:collabUserId', async (req: AuthRequest, res, next) => {
+  try {
+    const requesterId  = req.user!.userId
+    const snippetId    = req.params['id']
+    const collabUserId = req.params['collabUserId']
+    if (!snippetId || !collabUserId) { res.status(400).json({ ok: false, error: 'Missing parameters' }); return }
+
+    const snippet = await prisma.snippet.findFirst({ where: { id: snippetId, ownerId: requesterId } })
+    if (!snippet) { res.status(403).json({ ok: false, error: 'Only the owner can remove collaborators' }); return }
+
+    await prisma.collaborator.delete({ where: { snippetId_userId: { snippetId, userId: collabUserId } } })
+    res.json({ ok: true, data: null })
+  } catch (err) { next(err) }
+})
+
+// ── GET /api/snippets/:id ──────────────────────────────────────────────────
+snippetsRouter.get('/:id', async (req: AuthRequest, res, next) => {
+  try {
+    const userId    = req.user!.userId
+    const snippetId = req.params['id']
+    if (!snippetId) { res.status(400).json({ ok: false, error: 'Missing id' }); return }
+
+    const snippet = await prisma.snippet.findFirst({
+      where: { id: snippetId, OR: [{ ownerId: userId }, { collaborators: { some: { userId } } }] },
       select: snippetSelect,
     })
-    res.status(201).json({ ok: true, data: snippet })
+    if (!snippet) { res.status(404).json({ ok: false, error: 'Not found' }); return }
+    res.json({ ok: true, data: snippet })
   } catch (err) { next(err) }
 })
 
@@ -194,46 +261,6 @@ snippetsRouter.delete('/:id', async (req: AuthRequest, res, next) => {
     if (!existing) { res.status(403).json({ ok: false, error: 'Forbidden' }); return }
 
     await prisma.snippet.delete({ where: { id: snippetId } })
-    res.json({ ok: true, data: null })
-  } catch (err) { next(err) }
-})
-
-// ── POST /api/snippets/:id/collaborators ───────────────────────────────────
-snippetsRouter.post('/:id/collaborators', async (req: AuthRequest, res, next) => {
-  try {
-    const userId    = req.user!.userId
-    const snippetId = req.params['id']
-    if (!snippetId) { res.status(400).json({ ok: false, error: 'Missing id' }); return }
-
-    const snippet = await prisma.snippet.findFirst({ where: { id: snippetId, ownerId: userId } })
-    if (!snippet) { res.status(403).json({ ok: false, error: 'Only the owner can invite' }); return }
-
-    const { email, role } = collaboratorSchema.parse(req.body)
-    const invitee = await prisma.user.findUnique({ where: { email } })
-    if (!invitee)              { res.status(404).json({ ok: false, error: 'User not found' }); return }
-    if (invitee.id === userId) { res.status(400).json({ ok: false, error: 'Cannot invite yourself' }); return }
-
-    const collab = await prisma.collaborator.upsert({
-      where:  { snippetId_userId: { snippetId, userId: invitee.id } },
-      create: { snippetId, userId: invitee.id, role },
-      update: { role },
-    })
-    res.status(201).json({ ok: true, data: collab })
-  } catch (err) { next(err) }
-})
-
-// ── DELETE /api/snippets/:id/collaborators/:collabUserId ───────────────────
-snippetsRouter.delete('/:id/collaborators/:collabUserId', async (req: AuthRequest, res, next) => {
-  try {
-    const requesterId  = req.user!.userId
-    const snippetId    = req.params['id']
-    const collabUserId = req.params['collabUserId']
-    if (!snippetId || !collabUserId) { res.status(400).json({ ok: false, error: 'Missing parameters' }); return }
-
-    const snippet = await prisma.snippet.findFirst({ where: { id: snippetId, ownerId: requesterId } })
-    if (!snippet) { res.status(403).json({ ok: false, error: 'Only the owner can remove collaborators' }); return }
-
-    await prisma.collaborator.delete({ where: { snippetId_userId: { snippetId, userId: collabUserId } } })
     res.json({ ok: true, data: null })
   } catch (err) { next(err) }
 })
