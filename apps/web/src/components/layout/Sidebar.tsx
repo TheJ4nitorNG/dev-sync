@@ -21,6 +21,15 @@ const NAV = [
     ),
   },
   {
+    to: '/users', label: 'Developer Index', end: false,
+    icon: (
+      <svg viewBox="0 0 14 14" fill="currentColor" className="w-3.5 h-3.5">
+        <circle cx="7" cy="4" r="3"/>
+        <path d="M1 13c0-3.3 2.7-6 6-6s6 2.7 6 6"/>
+      </svg>
+    ),
+  },
+  {
     to: '/account', label: 'Dashboard', end: false,
     icon: (
       <svg viewBox="0 0 14 14" fill="currentColor" className="w-3.5 h-3.5">
@@ -28,28 +37,17 @@ const NAV = [
       </svg>
     ),
   },
-  {
-    to: '/?filter=shared', label: 'Shared with me', end: false,
-    icon: (
-      <svg viewBox="0 0 14 14" fill="currentColor" className="w-3.5 h-3.5">
-        <circle cx="5" cy="4" r="2.5"/>
-        <path d="M0 12c0-2.8 2.2-5 5-5s5 2.2 5 5"/>
-        <circle cx="11" cy="4" r="2"/>
-        <path d="M13.5 12c0-2-1.5-3.5-3-4"/>
-      </svg>
-    ),
-  },
 ]
 
 export const Sidebar = forwardRef<HTMLElement>((_, ref) => {
-  const { email, logout } = useAuthStore()
+  const { email, username, logout } = useAuthStore()
   const nav = useNavigate()
   const location = useLocation()
   const [folders, setFolders] = useState<Folder[]>([])
   const [newFolder, setNewFolder] = useState('')
   const [addingFolder, setAddingFolder] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
-  const initials = email ? email.slice(0, 2).toUpperCase() : 'U'
+  const initials = username?.slice(0, 2).toUpperCase() || (email ? email.slice(0, 2).toUpperCase() : 'U')
 
   useEffect(() => {
     api.folders.list()
@@ -207,7 +205,7 @@ export const Sidebar = forwardRef<HTMLElement>((_, ref) => {
             collapsed ? 'justify-center' : '',
           )}
           onClick={() => nav('/account')}
-          title={collapsed ? `${email} • Account` : undefined}
+          title={collapsed ? `${username || email} • Account` : undefined}
         >
           <div
             className="w-7 h-7 rounded-full bg-gradient-to-br from-accent to-accent2 grid place-items-center text-[10px] font-black text-black flex-shrink-0"
@@ -216,7 +214,7 @@ export const Sidebar = forwardRef<HTMLElement>((_, ref) => {
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0 animate-fade-in">
-              <p className="text-xs font-bold text-white truncate">{email}</p>
+              <p className="text-xs font-bold text-white truncate">{username || email}</p>
               <p className="text-[9px] font-mono text-muted uppercase tracking-widest">Account</p>
             </div>
           )}

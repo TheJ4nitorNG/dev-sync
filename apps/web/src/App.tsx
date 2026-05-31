@@ -7,6 +7,7 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { NewSnippetPage } from '@/pages/NewSnippetPage'
 import { SnippetPage } from '@/pages/SnippetPage'
 import { UserPage } from '@/pages/UserPage'
+import { UserListPage } from '@/pages/UserListPage'
 
 export default function App() {
   const token = useAuthStore((s) => s.token)
@@ -26,6 +27,7 @@ export default function App() {
       <Route path="/" element={<AppLayout />}>
         <Route index element={<DashboardPage />} />
         <Route path="account" element={<UserPage />} />
+        <Route path="users" element={<UserListPage />} />
         <Route path="snippets/new" element={<NewSnippetPage />} />
         <Route path="snippets/:id" element={<SnippetPage />} />
       </Route>

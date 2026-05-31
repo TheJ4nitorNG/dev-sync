@@ -17,7 +17,19 @@ http.interceptors.request.use((config) => {
 
 export const api = {
   auth: {
-    sync:   () => http.post('auth/sync').then((r) => r.data),
+    sync:    () => http.post('auth/sync').then((r) => r.data),
+    updateProfile: (data: { username?: string; bioStatus?: string }) =>
+      http.patch('auth/profile', data).then((r) => r.data),
+  },
+
+  users: {
+    list: () => http.get('users').then((r) => r.data),
+  },
+
+  messages: {
+    list: (userId: string) => http.get(`messages/${userId}`).then((r) => r.data),
+    send: (receiverId: string, content: string) =>
+      http.post('messages', { receiverId, content }).then((r) => r.data),
   },
 
   snippets: {
@@ -30,6 +42,10 @@ export const api = {
     remove: (id: string) => http.delete(`snippets/${id}`).then((r) => r.data),
     invite: (id: string, email: string, role: 'Editor' | 'Viewer') =>
       http.post(`snippets/${id}/collaborators`, { email, role }).then((r) => r.data),
+    respondToInvite: (id: string, status: 'Accepted' | 'Rejected') =>
+      http.patch(`snippets/${id}/collaborators/respond`, { status }).then((r) => r.data),
+    listInvites: () =>
+      http.get('snippets/invites').then((r) => r.data),
     removeCollab: (id: string, userId: string) =>
       http.delete(`snippets/${id}/collaborators/${userId}`).then((r) => r.data),
     getCommits: (id: string) =>

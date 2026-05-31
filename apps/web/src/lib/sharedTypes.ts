@@ -7,7 +7,9 @@
 export interface User {
   id: string
   email: string
+  username: string | null
   avatarUrl: string | null
+  bioStatus: string | null
   createdAt: Date
 }
 
@@ -184,6 +186,7 @@ export const SUPPORTED_LANGUAGES = [
 export type Language = (typeof SUPPORTED_LANGUAGES)[number]
 
 export type CollaboratorRole = 'Editor' | 'Viewer'
+export type CollaboratorStatus = 'Pending' | 'Accepted' | 'Rejected'
 
 export interface Tag {
   id: string
@@ -195,7 +198,8 @@ export interface Collaborator {
   userId: string
   snippetId: string
   role: CollaboratorRole
-  user: Pick<User, 'id' | 'email' | 'avatarUrl'>
+  status: CollaboratorStatus
+  user: Pick<User, 'id' | 'email' | 'username' | 'avatarUrl'>
 }
 
 export interface Folder {
@@ -215,7 +219,7 @@ export interface Snippet {
   updatedAt: Date
   tags: Tag[]
   collaborators: Collaborator[]
-  owner: Pick<User, 'id' | 'email' | 'avatarUrl'>
+  owner: Pick<User, 'id' | 'email' | 'username' | 'avatarUrl'>
   savedBy: SavedSnippetSummary[]
 }
 
@@ -226,7 +230,7 @@ export interface SavedSnippetSummary {
 
 export type SnippetSummary = Pick<
   Snippet,
-  'id' | 'title' | 'content' | 'language' | 'ownerId' | 'createdAt' | 'updatedAt' | 'tags' | 'savedBy'
+  'id' | 'title' | 'content' | 'language' | 'ownerId' | 'createdAt' | 'updatedAt' | 'tags' | 'savedBy' | 'owner'
 >
 
 export interface SnippetCommit {
@@ -237,7 +241,7 @@ export interface SnippetCommit {
   createdAt: Date
   snippetId: string
   authorId: string
-  author: Pick<User, 'id' | 'email' | 'avatarUrl'>
+  author: Pick<User, 'id' | 'email' | 'username' | 'avatarUrl'>
 }
 
 export interface CreateCommitInput {
@@ -264,6 +268,18 @@ export interface UpdateSnippetInput {
 
 export interface SaveSnippetInput {
   folderId?: string
+}
+
+// -- Messaging -------------------------------------------------------------
+export interface Message {
+  id: string
+  content: string
+  createdAt: Date
+  isRead: boolean
+  senderId: string
+  receiverId: string
+  sender: Pick<User, 'id' | 'email' | 'username' | 'avatarUrl'>
+  receiver: Pick<User, 'id' | 'email' | 'username' | 'avatarUrl'>
 }
 
 // -- Collaboration ---------------------------------------------------------

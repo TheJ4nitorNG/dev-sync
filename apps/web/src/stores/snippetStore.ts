@@ -14,6 +14,7 @@ interface FetchParams {
 interface SnippetState {
   snippets: SnippetSummary[]
   activeSnippet: Snippet | null
+  invites: any[]
   loading: boolean
   fetchSnippets: (params?: FetchParams) => Promise<void>
   fetchSnippet: (id: string) => Promise<void>
@@ -21,11 +22,14 @@ interface SnippetState {
   deleteSnippet: (id: string) => Promise<void>
   saveSnippet: (id: string, folderId?: string) => Promise<void>
   unsaveSnippet: (id: string) => Promise<void>
+  fetchInvites: () => Promise<void>
+  respondToInvite: (snippetId: string, status: 'Accepted' | 'Rejected') => Promise<void>
 }
 
-export const useSnippetStore = create<SnippetState>((set) => ({
+export const useSnippetStore = create<SnippetState>((set, get) => ({
   snippets: [],
   activeSnippet: null,
+  invites: [],
   loading: false,
 
   fetchSnippets: async (params) => {
@@ -114,5 +118,22 @@ export const useSnippetStore = create<SnippetState>((set) => ({
         activeSnippet: s.activeSnippet?.id === id ? updateSnippet(s.activeSnippet) : s.activeSnippet
       }
     })
+  },
+
+  fetchInvites: async () => {
+    try {
+      const res = await api.snippets.listInvites()
+      set({ invites: res.data })
+    } catch {}
+  },
+
+  respondToInvite: async (snippetId, status) => {
+    await api.snippets.respondToInvite(snippetId, status)
+    set((s) => ({
+      invites: s.invites.filter((inv) => inv.snippetId !== snippetId)
+    }))
+    if (status === 'Accepted') {
+      get().fetchSnippets()
+    }
   },
 }))

@@ -13,10 +13,11 @@ const snippetSelect = {
   collaborators: {
     select: {
       role: true,
-      user: { select: { id: true, email: true, avatarUrl: true } },
+      status: true,
+      user: { select: { id: true, email: true, username: true, avatarUrl: true } },
     },
   },
-  owner: { select: { id: true, email: true, avatarUrl: true } },
+  owner: { select: { id: true, email: true, username: true, avatarUrl: true } },
   savedBy: {
     select: { userId: true, folderId: true }
   },
@@ -67,6 +68,22 @@ snippetsRouter.get('/', async (req: AuthRequest, res, next) => {
       orderBy: { updatedAt: 'desc' },
     })
     res.json({ ok: true, data: snippets })
+  } catch (err) { next(err) }
+})
+
+// ── GET /api/snippets/invites ──────────────────────────────────────────────
+snippetsRouter.get('/invites', async (req: AuthRequest, res, next) => {
+  try {
+    const userId = req.user!.userId
+    const invites = await prisma.collaborator.findMany({
+      where: { userId, status: 'Pending' },
+      include: {
+        snippet: {
+          select: { id: true, title: true, owner: { select: { id: true, email: true, username: true } } }
+        }
+      }
+    })
+    res.json({ ok: true, data: invites })
   } catch (err) { next(err) }
 })
 
@@ -135,7 +152,7 @@ snippetsRouter.get('/:id/commits', async (req: AuthRequest, res, next) => {
     const commits = await prisma.snippetCommit.findMany({
       where: { snippetId },
       orderBy: { createdAt: 'desc' },
-      include: { author: { select: { id: true, email: true, avatarUrl: true } } },
+      include: { author: { select: { id: true, email: true, username: true, avatarUrl: true } } },
     })
     res.json({ ok: true, data: commits })
   } catch (err) { next(err) }
@@ -151,10 +168,10 @@ snippetsRouter.post('/:id/commits', async (req: AuthRequest, res, next) => {
     const existing = await prisma.snippet.findFirst({
       where: { id: snippetId, OR: [
         { ownerId: userId },
-        { collaborators: { some: { userId, role: 'Editor' } } },
+        { collaborators: { some: { userId, role: 'Editor', status: 'Accepted' } } },
       ]},
     })
-    if (!existing) { res.status(403).json({ ok: false, error: 'Only owners or editors can commit' }); return }
+    if (!existing) { res.status(403).json({ ok: false, error: 'Only owners or accepted editors can commit' }); return }
 
     const body = commitSchema.parse(req.body)
 
@@ -166,7 +183,7 @@ snippetsRouter.post('/:id/commits', async (req: AuthRequest, res, next) => {
         content: body.content,
         originalContent: body.originalContent,
       },
-      include: { author: { select: { id: true, email: true, avatarUrl: true } } },
+      include: { author: { select: { id: true, email: true, username: true, avatarUrl: true } } },
     })
     
     // Also update snippet content to match the new commit
@@ -196,10 +213,29 @@ snippetsRouter.post('/:id/collaborators', async (req: AuthRequest, res, next) =>
 
     const collab = await prisma.collaborator.upsert({
       where:  { snippetId_userId: { snippetId, userId: invitee.id } },
-      create: { snippetId, userId: invitee.id, role },
-      update: { role },
+      create: { snippetId, userId: invitee.id, role, status: 'Pending' },
+      update: { role, status: 'Pending' }, // Reset status on re-invite
     })
     res.status(201).json({ ok: true, data: collab })
+  } catch (err) { next(err) }
+})
+
+// ── PATCH /api/snippets/:id/collaborators/respond ─────────────────────────
+snippetsRouter.patch('/:id/collaborators/respond', async (req: AuthRequest, res, next) => {
+  try {
+    const userId    = req.user!.userId
+    const snippetId = req.params['id']
+    const { status } = z.object({
+      status: z.enum(['Accepted', 'Rejected'])
+    }).parse(req.body)
+
+    if (!snippetId) { res.status(400).json({ ok: false, error: 'Missing id' }); return }
+
+    const collab = await prisma.collaborator.update({
+      where: { snippetId_userId: { snippetId, userId } },
+      data: { status }
+    })
+    res.json({ ok: true, data: collab })
   } catch (err) { next(err) }
 })
 
@@ -244,7 +280,7 @@ snippetsRouter.patch('/:id', async (req: AuthRequest, res, next) => {
     const existing = await prisma.snippet.findFirst({
       where: { id: snippetId, OR: [
         { ownerId: userId },
-        { collaborators: { some: { userId, role: 'Editor' } } },
+        { collaborators: { some: { userId, role: 'Editor', status: 'Accepted' } } },
       ]},
     })
     if (!existing) { res.status(403).json({ ok: false, error: 'Forbidden' }); return }
