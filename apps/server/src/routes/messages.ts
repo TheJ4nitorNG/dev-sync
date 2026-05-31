@@ -71,7 +71,7 @@ messagesRouter.post('/', authenticate, async (req: AuthRequest, res, next) => {
     // Trigger Email Notification (Async)
     sendEmailNotification({
       to: message.receiver.email,
-      subject: `New message from ${message.sender.username || message.sender.email}`,
+      subject: `DEV-SYNC: New message from ${message.sender.username || message.sender.email}`,
       html: `
         <div style="font-family: sans-serif; padding: 20px; color: #111; max-width: 600px; border: 1px solid #eee; border-radius: 12px;">
           <h2 style="color: #111; margin-top: 0;">You've got a new message on Dev-Sync</h2>
