@@ -46,7 +46,6 @@ app.use((req, res, next) => {
 })
 
 // ── Routes ───────────────────────────────────────────────────────────────────
-app.get('/api/snippets-test', (req, res) => res.json({ ok: true, msg: 'Snippets router base should be working' }))
 app.use('/api/auth', authRouter)
 app.use('/api/snippets', authenticate, snippetsRouter)
 app.use('/api/tags', authenticate, tagsRouter)

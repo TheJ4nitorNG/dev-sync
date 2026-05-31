@@ -17,35 +17,35 @@ http.interceptors.request.use((config) => {
 
 export const api = {
   auth: {
-    sync:   () => http.post('/auth/sync').then((r) => r.data),
+    sync:   () => http.post('auth/sync').then((r) => r.data),
   },
 
   snippets: {
     list:   (params?: { q?: string; language?: string; tag?: string; folder?: string }) =>
-      http.get('/snippets', { params }).then((r) => r.data),
-    get:    (id: string) => http.get(`/snippets/${id}`).then((r) => r.data),
-    create: (data: CreateSnippetInput) => http.post('/snippets', data).then((r) => r.data),
+      http.get('snippets', { params }).then((r) => r.data),
+    get:    (id: string) => http.get(`snippets/${id}`).then((r) => r.data),
+    create: (data: CreateSnippetInput) => http.post('snippets', data).then((r) => r.data),
     update: (id: string, data: UpdateSnippetInput) =>
-      http.patch(`/snippets/${id}`, data).then((r) => r.data),
-    remove: (id: string) => http.delete(`/snippets/${id}`).then((r) => r.data),
+      http.patch(`snippets/${id}`, data).then((r) => r.data),
+    remove: (id: string) => http.delete(`snippets/${id}`).then((r) => r.data),
     invite: (id: string, email: string, role: 'Editor' | 'Viewer') =>
-      http.post(`/snippets/${id}/collaborators`, { email, role }).then((r) => r.data),
+      http.post(`snippets/${id}/collaborators`, { email, role }).then((r) => r.data),
     removeCollab: (id: string, userId: string) =>
-      http.delete(`/snippets/${id}/collaborators/${userId}`).then((r) => r.data),
+      http.delete(`snippets/${id}/collaborators/${userId}`).then((r) => r.data),
     getCommits: (id: string) =>
-      http.get(`/snippets/${id}/commits`).then((r) => r.data),
+      http.get(`snippets/${id}/commits`).then((r) => r.data),
     createCommit: (id: string, data: CreateCommitInput) =>
-      http.post(`/snippets/${id}/commits`, data).then((r) => r.data),
+      http.post(`snippets/${id}/commits`, data).then((r) => r.data),
   },
 
   tags: {
-    list:   () => http.get('/tags').then((r) => r.data),
-    create: (name: string, color: string) => http.post('/tags', { name, color }).then((r) => r.data),
+    list:   () => http.get('tags').then((r) => r.data),
+    create: (name: string, color: string) => http.post('tags', { name, color }).then((r) => r.data),
   },
 
   folders: {
-    list:   () => http.get('/folders').then((r) => r.data),
-    create: (name: string) => http.post('/folders', { name }).then((r) => r.data),
-    remove: (id: string) => http.delete(`/folders/${id}`).then((r) => r.data),
+    list:   () => http.get('folders').then((r) => r.data),
+    create: (name: string) => http.post('folders', { name }).then((r) => r.data),
+    remove: (id: string) => http.delete(`folders/${id}`).then((r) => r.data),
   },
 }
