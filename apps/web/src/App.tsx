@@ -8,7 +8,7 @@ import { NewSnippetPage } from '@/pages/NewSnippetPage'
 import { SnippetPage } from '@/pages/SnippetPage'
 import { UserPage } from '@/pages/UserPage'
 
-export function App() {
+export default function App() {
   const token = useAuthStore((s) => s.token)
 
   if (!token) {
