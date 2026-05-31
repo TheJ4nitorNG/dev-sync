@@ -24,10 +24,16 @@ export const useAuthStore = create<AuthState>()(
       username: null,
       bioStatus: null,
 
-      setAuth: (token, userId, email) => set({ token, userId, email }),
+      setAuth: (token, userId, email) => {
+        // Prevent redundant state updates if nothing changed
+        if (get().token === token && get().userId === userId) return
+        set({ token, userId, email })
+      },
 
       sync: async () => {
-        if (!get().token) return
+        const { token } = get()
+        if (!token) return
+        
         try {
           const res = await api.auth.sync()
           set({
@@ -36,9 +42,10 @@ export const useAuthStore = create<AuthState>()(
             username: res.data.username,
             bioStatus: res.data.bioStatus,
           })
-        } catch {
-          // If sync fails, token might be invalid
-          get().logout()
+        } catch (err) {
+          console.error('[AuthStore] Sync failed:', err)
+          // We DON'T call logout here to avoid login loops.
+          // The user still has a valid Supabase session.
         }
       },
 
@@ -62,15 +69,24 @@ export const useAuthStore = create<AuthState>()(
 // Listen for Supabase auth changes and sync the store
 supabase.auth.onAuthStateChange(async (event, session) => {
   const store = useAuthStore.getState()
+  
   if (session) {
+    const isNewToken = store.token !== session.access_token
+    
     store.setAuth(
       session.access_token,
       session.user.id,
       session.user.email ?? ''
     )
-    // Always trigger a sync to get profile data (username/status) after login
-    await store.sync()
+
+    // Only sync on initial session, sign in, or token refresh
+    if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED' || isNewToken) {
+      await store.sync()
+    }
   } else if (event === 'SIGNED_OUT') {
-    store.logout()
+    // Only call logout if we actually have state to clear
+    if (store.token) {
+      store.logout()
+    }
   }
 })
