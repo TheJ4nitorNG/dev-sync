@@ -30,6 +30,14 @@ const NAV = [
     ),
   },
   {
+    to: '/messages', label: 'Direct Messages', end: false,
+    icon: (
+      <svg viewBox="0 0 14 14" fill="currentColor" className="w-3.5 h-3.5">
+        <path d="M0 2a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H4l-4 2V2zm2 1v7h10V2H2v1z"/>
+      </svg>
+    ),
+  },
+  {
     to: '/account', label: 'Dashboard', end: false,
     icon: (
       <svg viewBox="0 0 14 14" fill="currentColor" className="w-3.5 h-3.5">

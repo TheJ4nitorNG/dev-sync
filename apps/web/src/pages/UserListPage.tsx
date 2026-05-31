@@ -88,7 +88,7 @@ export function UserListPage() {
                           {viewingSaved === user.id ? 'Close Collection' : 'View Collection'}
                         </button>
                         <button 
-                          onClick={() => alert(`Messaging ${user.username || user.email} feature coming next!`)}
+                          onClick={() => nav(`/messages/${user.id}`)}
                           className="text-[10px] font-mono font-bold text-accent opacity-0 group-hover:opacity-100 transition-opacity uppercase tracking-widest hover:underline"
                         >
                           Message
