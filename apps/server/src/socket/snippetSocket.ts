@@ -36,7 +36,7 @@ function assignColor(snippetId: string): PeerColor {
   return PEER_COLORS.find((c: PeerColor) => !usedColors.has(c)) ?? PEER_COLORS[0]!
 }
 
-export function registerSnippetSocket(io: AppServer) {
+export function setupSnippetSocket(io: AppServer) {
   io.use(async (socket, next) => {
     const token = socket.handshake.auth['token'] as string | undefined
     if (!token) return next(new Error('Unauthorized'))
@@ -59,13 +59,10 @@ export function registerSnippetSocket(io: AppServer) {
     // ── snippet:join ───────────────────────────────────────────────────────
     socket.on('snippet:join', async (snippetId: string, hasDoc?: boolean) => {
       const snippet = await prisma.snippet.findFirst({
-        where: {
-          id: snippetId,
-          OR: [{ ownerId: userId }, { collaborators: { some: { userId } } }],
-        },
+        where: { id: snippetId },
         select: { id: true, content: true },
       })
-      if (!snippet) { socket.emit('error', 'Access denied'); return }
+      if (!snippet) { socket.emit('error', 'Snippet not found'); return }
 
       socket.join(snippetId)
       socket.data.snippetId = snippetId
@@ -156,7 +153,7 @@ async function broadcastPeers(io: AppServer, snippetId: string) {
   const userIds = [...peerMap.keys()]
   const users = await prisma.user.findMany({
     where: { id: { in: userIds } },
-    select: { id: true, email: true, avatarUrl: true },
+    select: { id: true, email: true, username: true, avatarUrl: true },
   })
 
   const snippetCursors = cursors.get(snippetId)
