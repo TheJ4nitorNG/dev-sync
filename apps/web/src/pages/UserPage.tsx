@@ -1,5 +1,6 @@
 import { useAuthStore } from '@/stores/authStore'
 import { useSnippetStore } from '@/stores/snippetStore'
+import { supabase } from '@/lib/supabase'
 import { useEffect, useState } from 'react'
 
 export function UserPage() {
@@ -146,9 +147,30 @@ export function UserPage() {
         {/* Account Actions */}
         <section>
           <h2 className="text-xs font-mono font-bold text-muted uppercase tracking-[0.2em] mb-4 pb-2 border-b border-border/30">
-            Session
+            Account Actions
           </h2>
           <div className="grid gap-3">
+            <button 
+              onClick={async () => {
+                const newPass = prompt('Enter your new password:')
+                if (!newPass) return
+                try {
+                  const { error } = await supabase.auth.updateUser({ password: newPass })
+                  if (error) throw error
+                  alert('Password updated successfully!')
+                } catch (err: any) {
+                  alert(`Error: ${err.message}`)
+                }
+              }}
+              className="flex items-center justify-between px-5 py-4 card bg-card/30 border-border/30 hover:border-border transition-all group text-left w-full"
+            >
+              <div>
+                <p className="text-sm font-bold text-white group-hover:text-accent transition-colors">Change Password</p>
+                <p className="text-[10px] text-dim font-mono uppercase mt-1">Update your login security</p>
+              </div>
+              <span className="text-muted group-hover:translate-x-1 transition-transform">→</span>
+            </button>
+
             <button 
               onClick={logout}
               className="flex items-center justify-between px-5 py-4 card bg-accent3/5 border-accent3/10 hover:bg-accent3/10 hover:border-accent3/30 transition-all group text-left w-full"

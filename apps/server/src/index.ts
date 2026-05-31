@@ -25,15 +25,15 @@ const httpServer = createServer(app)
 
 const io = new Server<ClientToServerEvents, ServerToClientEvents, never, SocketData>(httpServer, {
   cors: {
-    origin: process.env['CLIENT_URL'] ?? 'http://localhost:3000',
+    origin: true,
     methods: ['GET', 'POST'],
   },
 })
 
 // ── Middleware ───────────────────────────────────────────────────────────────
-app.use(helmet())
+app.use(helmet({ contentSecurityPolicy: false }))
 app.use(cors({
-  origin: process.env['CLIENT_URL'] ?? 'http://localhost:3000',
+  origin: true,
   credentials: true,
 }))
 app.use(express.json())
@@ -67,5 +67,5 @@ app.use(errorHandler)
 
 const PORT = Number(process.env['PORT'] ?? 4000)
 httpServer.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀  Serveer running on http://0.0.0.0:${PORT}`)
+  console.log(`🚀  Server running on http://0.0.0.0:${PORT}`)
 })
