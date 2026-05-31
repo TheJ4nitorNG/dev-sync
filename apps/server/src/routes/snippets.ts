@@ -35,6 +35,7 @@ const collaboratorSchema = z.object({
 const commitSchema = z.object({
   message: z.string().min(1).max(255),
   content: z.string(),
+  originalContent: z.string(),
 })
 
 // ── GET /api/snippets/:id/commits ──────────────────────────────────────────
@@ -81,6 +82,7 @@ snippetsRouter.post('/:id/commits', async (req: AuthRequest, res, next) => {
         authorId: userId,
         message: body.message,
         content: body.content,
+        originalContent: body.originalContent,
       },
       include: { author: { select: { id: true, email: true, avatarUrl: true } } },
     })

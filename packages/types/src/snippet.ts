@@ -204,6 +204,7 @@ export interface SnippetCommit {
   id: string
   message: string
   content: string
+  originalContent: string
   createdAt: Date
   snippetId: string
   authorId: string
@@ -213,6 +214,7 @@ export interface SnippetCommit {
 export interface CreateCommitInput {
   message: string
   content: string
+  originalContent: string
 }
 
 export interface CreateSnippetInput {

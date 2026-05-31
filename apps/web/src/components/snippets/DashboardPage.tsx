@@ -176,7 +176,7 @@ export function DashboardPage() {
         )}
 
         {/* ── Language filter tabs ── */}
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none animate-fade-in pb-0.5">
+        <div className="flex flex-wrap items-center gap-2 animate-fade-in pb-0.5">
           {(['all', ...SUPPORTED_LANGUAGES] as LangFilter[]).map((l) => (
             <button
               key={l}

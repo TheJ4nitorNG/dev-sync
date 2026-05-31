@@ -21,12 +21,13 @@ export function SnippetPage() {
   const editorRef = useRef<Parameters<OnMount>[0] | null>(null)
 
   const [theme, setTheme]               = useState('vs-dark')
-  const [language, setLanguage]         = useState<Language>('typescript')
+  const [language, setLanguage]         = useState<Language>(activeSnippet?.language as Language || 'typescript')
   const [saving, setSaving]             = useState(false)
   const [saveMsg, setSaveMsg]           = useState('')
   const [showCollabPanel, setShowCollab] = useState(false)
   const [showCommitsPanel, setShowCommits] = useState(false)
-  const [diffContent, setDiffContent]   = useState<string | null>(null)
+  const [diffConfig, setDiffConfig]       = useState<{ original: string; modified: string; title: string } | null>(null)
+  const [initialSnapshot, setInitialSnapshot] = useState<string>('')
   const [seeded, setSeeded]             = useState(false)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -39,16 +40,20 @@ export function SnippetPage() {
     if (id) fetchSnippet(id)
   }, [id, fetchSnippet])
 
-  // Seed Yjs once, and only once, from DB content
+  // Update language when activeSnippet changes
   useEffect(() => {
-    if (!activeSnippet || seeded) return
-    const yText = ydoc.getText('content')
-    if (yText.length === 0) {
-      ydoc.transact(() => yText.insert(0, activeSnippet.content), 'seed')
-    }
+    if (!activeSnippet) return
     setLanguage(activeSnippet.language as Language)
-    setSeeded(true)
-  }, [activeSnippet?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeSnippet?.id, activeSnippet?.language]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Take snapshot when loading a new snippet, and reset UI state
+  useEffect(() => {
+    if (!activeSnippet) return
+    setInitialSnapshot(activeSnippet.content)
+    setDiffConfig(null)
+    setShowCommits(false)
+    setShowCollab(false)
+  }, [activeSnippet?.id])
 
   const { connected, peers, moveCursor } = useSocketSync({
     snippetId: id ?? '',
@@ -56,24 +61,21 @@ export function SnippetPage() {
     editorRef,
   })
 
-  // ── Debounced auto-save ───────────────────────────────────────────────────
-  const triggerSave = useCallback(() => {
+  // ── Manual save ───────────────────────────────────────────────────────────
+  const handleSave = useCallback(async () => {
     if (!id) return
-    if (saveTimer.current) clearTimeout(saveTimer.current)
-    saveTimer.current = setTimeout(async () => {
-      try {
-        setSaving(true)
-        const content = editorRef.current?.getValue() ?? ydoc.getText('content').toString()
-        await api.snippets.update(id, { content, language })
-        setSaveMsg('Saved')
-        setTimeout(() => setSaveMsg(''), 2500)
-      } catch {
-        setSaveMsg('⚠ Save failed')
-      } finally {
-        setSaving(false)
-      }
-    }, 1500)
-  }, [id, language])
+    setSaving(true)
+    try {
+      const content = editorRef.current?.getValue() ?? ydoc.getText('content').toString()
+      await api.snippets.update(id, { content, language })
+      setSaveMsg('Saved')
+      setTimeout(() => setSaveMsg(''), 2500)
+    } catch {
+      setSaveMsg('⚠ Save failed')
+    } finally {
+      setSaving(false)
+    }
+  }, [id, language, ydoc])
 
   const handleMount: OnMount = (editor) => {
     editorRef.current = editor
@@ -83,24 +85,8 @@ export function SnippetPage() {
       moveCursor(e.position.lineNumber, e.position.column)
     })
 
-    // Content change → auto-save
-    editor.onDidChangeModelContent(() => {
-      triggerSave()
-    })
-
     // Cmd/Ctrl+S → immediate save
-    editor.addCommand(2048 | 49, async () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current)
-      if (!id) return
-      setSaving(true)
-      try {
-        await api.snippets.update(id, { content: editor.getValue(), language })
-        setSaveMsg('Saved')
-        setTimeout(() => setSaveMsg(''), 2500)
-      } catch {
-        setSaveMsg('⚠ Save failed')
-      } finally { setSaving(false) }
-    })
+    editor.addCommand(2048 | 49, handleSave)
   }
 
   if (loading && !activeSnippet) {
@@ -173,6 +159,15 @@ export function SnippetPage() {
             </span>
           )}
         </div>
+
+        {/* Save */}
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="btn-accent px-4 py-1.5 text-[10px] flex-shrink-0 disabled:opacity-50"
+        >
+          {saving ? 'Saving...' : 'Save Snippet'}
+        </button>
 
         {/* Copy */}
         <button
@@ -256,30 +251,8 @@ export function SnippetPage() {
 
       {/* ── Editor + collab panel ── */}
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 overflow-hidden relative">
-          {diffContent !== null ? (
-            <DiffEditor
-              height="100%"
-              language={language === 'c#' ? 'csharp' : language === 'c++' ? 'cpp' : language === 'gml' ? 'plaintext' : language}
-              theme={theme}
-              original={diffContent}
-              modified={editorRef.current?.getValue() ?? activeSnippet.content}
-              options={{
-                fontSize: 13,
-                fontFamily: "'Azeret Mono', monospace",
-                fontLigatures: true,
-                minimap: { enabled: false },
-                padding: { top: 20, bottom: 20 },
-                lineNumbers: 'on',
-                renderLineHighlight: 'gutter',
-                scrollBeyondLastLine: false,
-                wordWrap: 'on',
-                automaticLayout: true,
-                smoothScrolling: true,
-                readOnly: true,
-              }}
-            />
-          ) : (
+        <div className="flex-1 overflow-hidden relative flex flex-col">
+          <div className="flex-1 overflow-hidden">
             <MonacoEditor
               height="100%"
               language={language === 'c#' ? 'csharp' : language === 'c++' ? 'cpp' : language === 'gml' ? 'plaintext' : language}
@@ -305,6 +278,42 @@ export function SnippetPage() {
                 suggest: { preview: true },
               }}
             />
+          </div>
+          {diffConfig !== null && (
+            <div className="h-1/2 border-t border-border overflow-hidden flex flex-col">
+              <div className="bg-surface px-4 py-2 border-b border-border flex justify-between items-center text-[10px] font-mono text-dim uppercase tracking-wider">
+                <span>{diffConfig.title}</span>
+                <button 
+                  onClick={() => setDiffConfig(null)}
+                  className="hover:text-white transition-colors"
+                >
+                  Close Diff
+                </button>
+              </div>
+              <div className="flex-1">
+                <DiffEditor
+                  height="100%"
+                  language={language === 'c#' ? 'csharp' : language === 'c++' ? 'cpp' : language === 'gml' ? 'plaintext' : language}
+                  theme={theme}
+                  original={diffConfig.original}
+                  modified={diffConfig.modified}
+                  options={{
+                    fontSize: 13,
+                    fontFamily: "'Azeret Mono', monospace",
+                    fontLigatures: true,
+                    minimap: { enabled: false },
+                    padding: { top: 20, bottom: 20 },
+                    lineNumbers: 'on',
+                    renderLineHighlight: 'gutter',
+                    scrollBeyondLastLine: false,
+                    wordWrap: 'on',
+                    automaticLayout: true,
+                    smoothScrolling: true,
+                    readOnly: true,
+                  }}
+                />
+              </div>
+            </div>
           )}
         </div>
 
@@ -322,9 +331,10 @@ export function SnippetPage() {
           <div className="animate-slide-right h-full">
             <CommitsPanel
               snippetId={id!}
+              initialSnapshot={initialSnapshot}
               getCurrentContent={() => editorRef.current?.getValue() ?? ydoc.getText('content').toString()}
-              onClose={() => { setShowCommits(false); setDiffContent(null); }}
-              onViewDiff={setDiffContent}
+              onClose={() => { setShowCommits(false); setDiffConfig(null); }}
+              onViewDiff={setDiffConfig}
             />
           </div>
         )}
@@ -354,7 +364,7 @@ export function SnippetPage() {
 
         <div className="flex-1" />
         <span className="font-mono text-[9px] text-dim flex-shrink-0">
-          {saving ? 'Saving…' : saveMsg || 'Auto-save on'}
+          {saving ? 'Saving…' : saveMsg || ''}
         </span>
       </div>
     </div>

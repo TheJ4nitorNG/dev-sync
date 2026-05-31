@@ -47,6 +47,7 @@ model SnippetCommit {
   id        String   @id @default(cuid())
   message   String
   content   String   @db.Text
+  originalContent String @db.Text @default("")
   createdAt DateTime @default(now())
 
   snippet   Snippet @relation(fields: [snippetId], references: [id], onDelete: Cascade)

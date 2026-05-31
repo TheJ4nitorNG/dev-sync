@@ -2,7 +2,7 @@ import type { CursorPosition, ContentDelta, PeerState } from './collaboration'
 
 // Events emitted by the CLIENT → server
 export interface ClientToServerEvents {
-  'snippet:join':   (snippetId: string) => void
+  'snippet:join':   (snippetId: string, hasDoc?: boolean) => void
   'snippet:leave':  (snippetId: string) => void
   'snippet:delta':  (snippetId: string, delta: ContentDelta) => void
   'cursor:move':    (snippetId: string, position: CursorPosition) => void
@@ -10,6 +10,7 @@ export interface ClientToServerEvents {
 
 // Events emitted by the SERVER → client
 export interface ServerToClientEvents {
+  'snippet:load':   (updateBase64: string) => void
   'snippet:delta':  (delta: ContentDelta) => void
   'peers:update':   (peers: PeerState[]) => void
   'cursor:update':  (userId: string, position: CursorPosition | null) => void

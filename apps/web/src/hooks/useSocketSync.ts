@@ -105,6 +105,15 @@ export function useSocketSync({
       }
     })
 
+    socket.on('snippet:load', (updateBase64: string) => {
+      const binaryString = atob(updateBase64)
+      const update = new Uint8Array(binaryString.length)
+      for (let i = 0; i < binaryString.length; i++) {
+        update[i] = binaryString.charCodeAt(i)
+      }
+      Y.applyUpdate(ydoc, update, 'remote')
+    })
+
     socket.on('snippet:delta', (delta: ContentDelta) => {
       const binaryString = atob(delta.update)
       const update = new Uint8Array(binaryString.length)
@@ -120,7 +129,18 @@ export function useSocketSync({
       applyRemoteCursor(userId, peer?.color ?? '#a78bfa', position.lineNumber, position.column)
     })
 
-    socket.emit('snippet:join', snippetId)
+    const hasDoc = yText.length > 0
+    socket.emit('snippet:join', snippetId, hasDoc)
+    if (hasDoc) {
+      // Push our local state to the server so it can restore its memory if it restarted
+      const state = Y.encodeStateAsUpdate(ydoc)
+      let binary = ''
+      for (let i = 0; i < state.byteLength; i++) {
+        binary += String.fromCharCode(state[i]!)
+      }
+      const delta: ContentDelta = { update: btoa(binary), origin: 'local' }
+      socket.emit('snippet:delta', snippetId, delta)
+    }
 
     // ── Yjs → Monaco binding ───────────────────────────────────────────────
     // When Yjs text changes, push the delta into Monaco without creating

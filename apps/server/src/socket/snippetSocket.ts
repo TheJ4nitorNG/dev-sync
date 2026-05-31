@@ -26,6 +26,10 @@ const rooms = new Map<
 
 const cursors = new Map<string, Map<string, CursorPosition>>()
 
+// Store Yjs documents in memory
+import * as Y from 'yjs'
+const documents = new Map<string, Y.Doc>()
+
 function assignColor(snippetId: string): PeerColor {
   const room = rooms.get(snippetId)
   const usedColors = new Set(room ? [...room.values()].map((p) => p.color) : [])
@@ -53,20 +57,37 @@ export function registerSnippetSocket(io: AppServer) {
     const { userId } = socket.data
 
     // ── snippet:join ───────────────────────────────────────────────────────
-    socket.on('snippet:join', async (snippetId: string) => {
+    socket.on('snippet:join', async (snippetId: string, hasDoc?: boolean) => {
       const snippet = await prisma.snippet.findFirst({
         where: {
           id: snippetId,
           OR: [{ ownerId: userId }, { collaborators: { some: { userId } } }],
         },
-        select: { id: true },
+        select: { id: true, content: true },
       })
       if (!snippet) { socket.emit('error', 'Access denied'); return }
 
       socket.join(snippetId)
       socket.data.snippetId = snippetId
 
-      if (!rooms.has(snippetId)) rooms.set(snippetId, new Map())
+      if (!rooms.has(snippetId)) {
+        rooms.set(snippetId, new Map())
+        // Initialize the server-side Y.Doc
+        const ydoc = new Y.Doc()
+        documents.set(snippetId, ydoc)
+        
+        // If no clients have the doc, seed it from the database plain text
+        if (!hasDoc && snippet.content) {
+          ydoc.getText('content').insert(0, snippet.content)
+        }
+      }
+      
+      const ydoc = documents.get(snippetId)
+      if (ydoc) {
+        const state = Y.encodeStateAsUpdate(ydoc)
+        socket.emit('snippet:load', Buffer.from(state).toString('base64'))
+      }
+
       rooms.get(snippetId)!.set(socket.id, {
         userId,
         color: assignColor(snippetId),
@@ -83,6 +104,7 @@ export function registerSnippetSocket(io: AppServer) {
       if (rooms.get(snippetId)?.size === 0) {
         rooms.delete(snippetId)
         cursors.delete(snippetId)
+        documents.delete(snippetId)
       }
       await broadcastPeers(io, snippetId)
     })
@@ -91,12 +113,9 @@ export function registerSnippetSocket(io: AppServer) {
     socket.on('snippet:delta', async (snippetId: string, delta: ContentDelta) => {
       socket.to(snippetId).emit('snippet:delta', delta)
       try {
-        const Y = await import('yjs')
-        const ydoc = new Y.Doc()
-        Y.applyUpdate(ydoc, Buffer.from(delta.update, 'base64'))
-        const content = ydoc.getText('content').toString()
-        if (content) {
-          await prisma.snippet.update({ where: { id: snippetId }, data: { content } })
+        const ydoc = documents.get(snippetId)
+        if (ydoc) {
+          Y.applyUpdate(ydoc, Buffer.from(delta.update, 'base64'))
         }
       } catch {
         // Non-fatal

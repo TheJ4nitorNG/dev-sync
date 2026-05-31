@@ -4,26 +4,29 @@ import type { SnippetCommit } from '@dev-sync/types'
 import { useAuthStore } from '@/stores/authStore'
 
 export function CommitsPanel({ 
-  snippetId, 
+  snippetId,
+  initialSnapshot,
   getCurrentContent, 
   onClose,
   onViewDiff
 }: { 
   snippetId: string
+  initialSnapshot: string
   getCurrentContent: () => string
   onClose: () => void 
-  onViewDiff: (content: string | null) => void
+  onViewDiff: (config: { original: string; modified: string; title: string } | null) => void
 }) {
   const [commits, setCommits] = useState<SnippetCommit[]>([])
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [viewingId, setViewingId] = useState<string | null>(null)
+  const [viewingCurrent, setViewingCurrent] = useState(false)
   const userId = useAuthStore((s) => s.userId)
 
   useEffect(() => {
     api.snippets.getCommits(snippetId)
-      .then(setCommits)
+      .then((res) => setCommits(res.data))
       .catch((e) => setError(e.message || 'Failed to load commits'))
   }, [snippetId])
 
@@ -34,13 +37,32 @@ export function CommitsPanel({
     setLoading(true)
     try {
       const content = getCurrentContent()
-      const newCommit = await api.snippets.createCommit(snippetId, { message, content })
-      setCommits([newCommit, ...commits])
+      const res = await api.snippets.createCommit(snippetId, { 
+        message, 
+        content,
+        originalContent: initialSnapshot
+      })
+      setCommits([res.data, ...commits])
       setMessage('')
     } catch (err: any) {
       setError(err.message || 'Failed to create commit')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleViewCurrentDiff = () => {
+    if (viewingCurrent) {
+      setViewingCurrent(false)
+      onViewDiff(null)
+    } else {
+      setViewingCurrent(true)
+      setViewingId(null)
+      onViewDiff({
+        original: initialSnapshot,
+        modified: getCurrentContent(),
+        title: 'Current Edits vs Original Snapshot'
+      })
     }
   }
 
@@ -50,7 +72,12 @@ export function CommitsPanel({
       onViewDiff(null)
     } else {
       setViewingId(commit.id)
-      onViewDiff(commit.content)
+      setViewingCurrent(false)
+      onViewDiff({
+        original: commit.originalContent,
+        modified: commit.content,
+        title: `Commit ${commit.id.slice(0, 6)} vs Previous State`
+      })
     }
   }
 
@@ -83,8 +110,19 @@ export function CommitsPanel({
           </button>
         </form>
 
+        <button
+          onClick={handleViewCurrentDiff}
+          className={`w-full py-2 text-[10px] font-bold rounded-lg border transition-colors ${
+            viewingCurrent
+              ? 'bg-accent/10 border-accent/30 text-accent'
+              : 'bg-card border-border text-dim hover:text-white hover:border-border2'
+          }`}
+        >
+          {viewingCurrent ? 'Close Uncommitted Diff' : 'View Uncommitted Changes'}
+        </button>
+
         <div className="flex flex-col gap-3">
-          {commits.length === 0 ? (
+          {!commits || commits.length === 0 ? (
             <p className="text-muted text-xs text-center py-4 font-mono">No commits yet.</p>
           ) : (
             commits.map(commit => (

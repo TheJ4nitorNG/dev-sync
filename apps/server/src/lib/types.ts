@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Inlined shared types — keeps the server self-contained during build.
+// Inlined shared types ï¿½ keeps the server self-contained during build.
 // The canonical source remains packages/types (used by the web app).
 // -----------------------------------------------------------------------------
  
@@ -230,13 +230,14 @@ export interface ContentDelta { update: string; origin: string }
 
 // -- Socket events ---------------------------------------------------------
 export interface ClientToServerEvents {
-  'snippet:join':  (snippetId: string) => void
+  'snippet:join':  (snippetId: string, hasDoc?: boolean) => void
   'snippet:leave': (snippetId: string) => void
   'snippet:delta': (snippetId: string, delta: ContentDelta) => void
   'cursor:move':   (snippetId: string, position: CursorPosition) => void
 }
 
 export interface ServerToClientEvents {
+  'snippet:load':  (updateBase64: string) => void
   'snippet:delta': (delta: ContentDelta) => void
   'peers:update':  (peers: PeerState[]) => void
   'cursor:update': (userId: string, position: CursorPosition | null) => void
